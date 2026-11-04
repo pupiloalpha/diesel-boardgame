@@ -1,0 +1,231 @@
+/* =========================================================
+   Mesa — mão flutuante, campo de batalha com zoom/pan e
+   anexos sobrepostos. Carregar DEPOIS de App.css.
+   ========================================================= */
+
+/* ---------- Espaço reservado para a mão flutuante (mobile/tablet) ---------- */
+
+.game { padding-bottom: 210px; }
+
+/* =========================================================
+   Mão flutuante (leque na base da tela)
+   ========================================================= */
+
+.hand-dock {
+  position: fixed;
+  left: 50%;
+  bottom: 0;
+  transform: translateX(-50%);
+  width: min(760px, 100%);
+  z-index: 150;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-top: 2.5rem;
+  pointer-events: none;
+  background: radial-gradient(ellipse at 50% 100%, rgba(10, 8, 5, 0.9), transparent 70%);
+}
+
+.hand-label {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  max-width: 94%;
+  margin-bottom: 0.45rem;
+  padding: 0.2rem 0.85rem;
+  font-size: var(--fs-xs);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--brass);
+  background: rgba(0, 0, 0, 0.65);
+  border: 1px solid var(--border-lit);
+  border-radius: 999px;
+}
+
+.hand-hint {
+  letter-spacing: 0.02em;
+  text-transform: none;
+  color: var(--parchment);
+}
+
+.hand-fan {
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  margin-bottom: -26px;
+}
+
+.hand-slot {
+  pointer-events: auto;
+  margin-inline: -6px;
+  transform-origin: 50% 140%;
+  transform: translateY(var(--lift, 0px)) rotate(var(--rot, 0deg));
+  transition: transform var(--t-base) ease;
+}
+
+.hand-slot:hover { z-index: 5; }
+
+.hand-slot .card-img {
+  width: clamp(80px, 8.6vw, 122px);
+  max-width: none;
+  box-shadow: 0 -4px 18px rgba(0, 0, 0, 0.6), var(--shadow-md);
+}
+
+.hand-slot .card-img:hover { transform: translateY(-34px) scale(1.12); }
+.hand-slot .card-img.selected { transform: translateY(-48px) scale(1.15); }
+
+.hand-empty {
+  margin-bottom: 1.2rem;
+  font-size: var(--fs-sm);
+  color: var(--parchment-dim);
+}
+
+/* =========================================================
+   Campo de batalha — zoom, scroll e PAN
+   ========================================================= */
+
+.bf-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.35rem;
+  margin: -0.2rem 0 0.5rem;
+  font-size: var(--fs-xs);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--parchment-dim);
+}
+
+.bf-toolbar button {
+  display: inline-block;
+  width: auto;
+  min-width: 2rem;
+  margin: 0;
+  padding: 0.2rem 0.6rem;
+  font-size: var(--fs-sm);
+}
+
+/* Área rolável do tabuleiro. O PAN (arrastar) é habilitado em App.tsx. */
+.bf-scroll {
+  overflow: auto;
+  padding: 14px 4px 6px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-lit) transparent;
+  cursor: grab;
+  user-select: none;
+  touch-action: pan-x pan-y;
+}
+
+.bf-scroll.panning { cursor: grabbing; }
+
+/* No desktop, o tabuleiro ocupa toda a altura restante do .col-center
+   e pode estender-se visualmente ATÉ ATRÁS do leque da mão (que é
+   position: fixed, z-index 150, pointer-events: none).
+   A reserva de padding-bottom do .col-center foi zerada e o
+   max-height do .bf-scroll considera apenas o topbar + folga. */
+@media (min-width: 1101px) {
+  .game { padding-bottom: 0.75rem; }
+
+  .col-center {
+    padding-bottom: 0;              /* era 180px — libera a faixa da mão */
+  }
+
+  .bf-scroll {
+    max-height: calc(100vh - 180px); /* ~130 topbar + 50 folga */
+    min-height: 240px;
+  }
+}
+
+.battlefield {
+  --bf-zoom: 1;
+  --mini-w: calc(46px * var(--bf-zoom));
+  grid-template-columns: repeat(3, minmax(calc(190px * var(--bf-zoom)), 1fr));
+  gap: calc(0.8rem * var(--bf-zoom));
+  justify-items: stretch;
+  align-items: start;
+}
+
+@media (max-width: 760px) {
+  .battlefield {
+    grid-template-columns: repeat(auto-fit, minmax(calc(180px * var(--bf-zoom)), 1fr));
+  }
+}
+
+.battlefield .slot {
+  max-width: none;
+  width: 100%;
+  min-width: 0;
+  padding: 0.6rem;
+}
+
+.battlefield .slot .card-img {
+  width: 100%;
+  max-width: calc(110px * var(--bf-zoom));
+}
+
+.battlefield .objective-name { font-size: calc(0.72rem * var(--bf-zoom)); }
+.battlefield .slot .hint { font-size: calc(0.68rem * var(--bf-zoom)); }
+
+/* =========================================================
+   Cartas anexadas: uma linha, sobrepostas quando faltar espaço
+   ========================================================= */
+
+.battlefield .attachments {
+  display: flex;
+  flex-wrap: nowrap;
+  justify-content: center;
+  align-items: flex-start;
+  width: 100%;
+  min-height: calc(var(--mini-w) * 1.4 + 12px);
+  padding: 6px calc(var(--mini-w) / 2) 4px;
+  box-sizing: border-box;
+}
+
+.battlefield .mini {
+  position: relative;
+  flex: 0 1 var(--mini-w);
+  min-width: 0;
+  flex-direction: row;
+  justify-content: center;
+}
+
+.battlefield .mini .card-mini {
+  flex: none;
+  width: var(--mini-w);
+  transition: transform var(--t-fast) ease, box-shadow var(--t-fast) ease;
+}
+
+.battlefield .mini:hover { z-index: 20; }
+
+.battlefield .mini:hover .card-mini {
+  transform: translateY(-8px) scale(1.4);
+  border-color: var(--brass-bright);
+  box-shadow: var(--shadow-md), var(--glow-brass);
+}
+
+.mini-tag,
+.mini-mod {
+  position: absolute;
+  left: 50%;
+  margin-left: calc(var(--mini-w) / -2 + 2px);
+  padding: 0 4px;
+  font-size: 0.58rem;
+  font-weight: 700;
+  line-height: 1.35;
+  white-space: nowrap;
+  border-radius: 3px;
+  pointer-events: none;
+}
+
+.mini-tag {
+  bottom: 3px;
+  color: var(--ink);
+  background: rgba(242, 206, 122, 0.92);
+}
+
+.mini-mod {
+  top: 3px;
+  color: var(--brass-bright);
+  background: rgba(40, 24, 8, 0.92);
+  border: 1px solid rgba(201, 169, 97, 0.5);
+}

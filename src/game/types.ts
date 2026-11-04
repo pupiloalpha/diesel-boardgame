@@ -8,12 +8,25 @@ export interface MilitaryCard {
   image: string;
 }
 
+/** Efeitos possíveis de uma Carta de Objetivo. */
+export type ObjectiveEffect =
+  | { kind: 'restrictType'; type: MilitaryType }
+  | { kind: 'valueAdjust'; type: MilitaryType }
+  | { kind: 'typeChange'; type: MilitaryType; maxValue?: number }
+  | { kind: 'anyValue'; type: MilitaryType }
+  | { kind: 'postAnyValue'; type: MilitaryType }
+  | { kind: 'postHandSize'; bonus: number }
+  | { kind: 'postTypeChangeOwn' }
+  | { kind: 'postSwapWithHand' }
+  | { kind: 'conflictThreshold'; threshold: number };
+
 export interface ObjectiveCard {
   id: string;
   name: string;
   pv: number;
   text?: string;
   image: string;
+  effects?: ObjectiveEffect[];
 }
 
 export interface Faction {
@@ -23,13 +36,12 @@ export interface Faction {
   image: string;
 }
 
-/** Regras escolhidas na tela inicial. */
 export interface GameOptions {
-  numPlayers: number; // jogadores humanos (modo hotseat, 2–4)
-  long: boolean; // Partida Longa: usa os 12 objetivos
-  asymmetric: boolean; // Facções Assimétricas
-  solo: boolean; // Modo Solo
-  automas: number; // 1–3 (só no modo solo)
+  numPlayers: number;
+  long: boolean;
+  asymmetric: boolean;
+  solo: boolean;
+  automas: number;
 }
 
 export interface PlayerState {
@@ -42,10 +54,10 @@ export interface PlayerState {
 
 export interface Attachment {
   playerId: string;
-  cardId: string; // '' quando a carta está oculta para quem vê
+  cardId: string;
   revealed: boolean;
-  valueMod: number; // +1 / -1 da vantagem de facção (0 = sem alteração)
-  typeOverride: MilitaryType | null; // tipo alterado pela vantagem de facção
+  valueMod: number;
+  typeOverride: MilitaryType | null;
 }
 
 export interface BattlefieldSlot {
@@ -67,7 +79,6 @@ export interface ConfrontResult {
 export interface GameState {
   options: GameOptions;
   totalObjectives: number;
-
   players: Record<string, PlayerState>;
   militaryDeck: string[];
   militaryDiscard: string[];
@@ -75,21 +86,14 @@ export interface GameState {
   objectiveDeck: string[];
   battlefield: BattlefieldSlot[];
   firstPlayer: string;
-
-  // Modo solo: posição do Campo de Batalha atribuída a cada autômato
   automaSlot: Record<string, number>;
-
-  // Controle do turno (Avanço -> Recrutamento)
   hasAdvanced: boolean;
-
-  // Controle do Confronto
   pendingConfront: string | null;
   confrontTriggeredBy: string | null;
   reinforcePassed: string[];
-  modifyQueue: string[]; // quem pode usar a vantagem de facção
-  modifyDone: string[]; // quem já usou ou passou
-  resumeFrom: string | null; // quem joga depois do confronto
-
+  modifyQueue: string[];
+  modifyDone: string[];
+  resumeFrom: string | null;
   lastConfront: ConfrontResult | null;
   gameOver: boolean;
   winnerId: string | null;
