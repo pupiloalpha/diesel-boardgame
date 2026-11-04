@@ -86,7 +86,7 @@ body {
 }
 
 /* =========================================================
-   Layout
+   Layout (padrão = mobile / tablet, com scroll)
    ========================================================= */
 
 .game {
@@ -97,13 +97,9 @@ body {
 
 .layout {
   display: grid;
-  grid-template-columns: 300px 1fr 280px;
+  grid-template-columns: 1fr;
   gap: 1rem;
   align-items: start;
-}
-
-@media (max-width: 1100px) {
-  .layout { grid-template-columns: 1fr; }
 }
 
 .col-left, .col-center, .col-right {
@@ -171,13 +167,15 @@ body {
   text-transform: uppercase;
 }
 
-.faction-icon {
-  width: 34px;
-  height: 34px;
+/* Miniatura de carta da facção (substitui o círculo) */
+.faction-thumb {
+  width: 26px;
+  max-height: 36px;
   object-fit: cover;
-  border-radius: 50%;
-  border: 2px solid var(--border-lit);
-  box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.5), var(--shadow-sm);
+  border-radius: 3px;
+  border: 1px solid var(--border-lit);
+  box-shadow: var(--shadow-sm);
+  flex-shrink: 0;
 }
 
 /* --- steps indicator --- */
@@ -481,8 +479,29 @@ h3::after {
 
 .players li.current strong { color: var(--brass-bright); }
 
-.players li > div { font-size: var(--fs-sm); line-height: 1.35; }
+.players li > div { font-size: var(--fs-sm); line-height: 1.35; min-width: 0; }
 .players li > div strong { color: var(--parchment); font-weight: 600; }
+
+.player-faction-card {
+  width: 36px;
+  max-height: 50px;
+  object-fit: cover;
+  border-radius: 4px;
+  border: 1px solid var(--border-lit);
+  box-shadow: var(--shadow-sm);
+  flex-shrink: 0;
+}
+
+.players li.current .player-faction-card {
+  border-color: var(--brass-bright);
+  box-shadow: 0 0 8px rgba(242, 206, 122, 0.55);
+}
+
+.player-faction-name {
+  color: var(--parchment-dim);
+  font-size: var(--fs-xs);
+  letter-spacing: 0.05em;
+}
 
 /* =========================================================
    Buttons
@@ -793,3 +812,176 @@ button:disabled {
 }
 
 .exit-wrap button { max-width: 220px; }
+
+/* =========================================================
+   DESKTOP — tabuleiro/mesa sem scroll (>1100px)
+   ========================================================= */
+
+@media (min-width: 1101px) {
+  /* Contêiner raiz ocupa exatamente a viewport */
+  #root {
+    height: 100vh;
+    min-height: 0;
+    max-height: 100vh;
+    overflow: hidden;
+  }
+
+  /* Jogo ocupa a viewport inteira em flex column */
+  .game {
+    height: 100vh;
+    max-height: 100vh;
+    padding: 0.75rem;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    box-sizing: border-box;
+  }
+
+  .topbar {
+    flex-shrink: 0;
+    margin-bottom: 0.6rem;
+    padding: 0.6rem 0.85rem;
+    gap: 0.45rem;
+  }
+
+  .topbar-row {
+    font-size: 0.88rem;
+    gap: 0.6rem;
+  }
+
+  .step {
+    padding: 0.3rem 0.4rem;
+    font-size: 0.66rem;
+  }
+
+  /* Layout 3 colunas preenchendo o restante.
+     Esquerda cresceu (280px) para abrigar mão + mercado confortavelmente. */
+  .layout {
+    flex: 1 1 0;
+    min-height: 0;
+    grid-template-columns: 280px 1fr 300px;
+    gap: 0.75rem;
+    overflow: hidden;
+    align-items: stretch;
+  }
+
+  .col-left, .col-center, .col-right {
+    min-height: 0;
+    gap: 0.6rem;
+    overflow-y: auto;
+    overflow-x: hidden;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-lit) transparent;
+  }
+
+  .col-left::-webkit-scrollbar,
+  .col-center::-webkit-scrollbar,
+  .col-right::-webkit-scrollbar {
+    width: 6px;
+  }
+  .col-left::-webkit-scrollbar-thumb,
+  .col-center::-webkit-scrollbar-thumb,
+  .col-right::-webkit-scrollbar-thumb {
+    background: var(--border-lit);
+    border-radius: 3px;
+  }
+
+  /* Compactação geral */
+  section {
+    padding: 0.6rem 0.7rem;
+  }
+
+  h3 {
+    font-size: 0.85rem;
+    margin-bottom: 0.5rem;
+    padding-bottom: 0.35rem;
+    letter-spacing: 0.15em;
+  }
+
+  .hint {
+    font-size: 0.76rem;
+    margin-bottom: 0.4rem;
+  }
+
+  /* Cartas menores em todas as áreas */
+  .card-img { max-width: 120px; }
+  .hand .card-img { max-width: 72px; }
+
+  .card-mini { width: 44px; }
+
+  /* Mercado (agora na coluna esquerda): 4 itens em uma linha.
+     58×4 + 3×~4.8 ≈ 246px — cabe nos ~258px internos. */
+  .market {
+    gap: 0.3rem;
+    flex-wrap: wrap;
+  }
+  .market .card-img { max-width: 58px; }
+  .deck-button span { font-size: 0.62rem; }
+
+  /* Lista de jogadores compacta */
+  .players li {
+    padding: 0.35rem 0.45rem;
+    gap: 0.45rem;
+  }
+  .player-faction-card {
+    width: 28px;
+    max-height: 40px;
+  }
+  .players li > div { font-size: 0.72rem; line-height: 1.25; }
+  .player-faction-name { font-size: 0.65rem; }
+
+  /* Campo de batalha: 3 slots na mesma linha */
+  .battlefield {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.6rem;
+    align-items: start;
+  }
+  .slot {
+    padding: 0.5rem;
+    gap: 0.4rem;
+    max-width: none;
+  }
+  .slot .card-img { max-width: 100px; }
+  .objective-name { font-size: 0.68rem; }
+
+  .attachments { gap: 0.25rem; min-height: 30px; }
+  .mini small { font-size: 0.62rem; }
+  .badge { font-size: 0.58rem; padding: 1px 4px; }
+
+  /* Confronto */
+  .confront-result ul { font-size: 0.72rem; }
+  .confront-result ul li { padding: 0.2rem 0.35rem; }
+
+  /* Botões de ação compactos */
+  button {
+    padding: 0.45rem 0.6rem;
+    font-size: 0.82rem;
+    margin-top: 0.35rem;
+  }
+  .mod-buttons button {
+    padding: 0.28rem 0.3rem;
+    font-size: 0.65rem;
+  }
+
+  /* Botão "Voltar ao menu" fixo no canto inferior direito */
+  .exit-wrap {
+    position: fixed;
+    bottom: 0.75rem;
+    right: 0.75rem;
+    z-index: 100;
+    margin: 0;
+    padding: 0;
+    max-width: none;
+    width: auto;
+  }
+  .exit-wrap button {
+    max-width: none;
+    width: auto;
+    padding: 0.38rem 0.75rem;
+    font-size: 0.72rem;
+    background: rgba(35, 25, 15, 0.92);
+    backdrop-filter: blur(4px);
+    box-shadow: var(--shadow-md);
+    margin-top: 0;
+  }
+}

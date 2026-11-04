@@ -325,10 +325,10 @@ function Board({ G, ctx, moves, playerID }: any) {
             <img
               src={faction.image}
               alt={faction.name}
-              className="faction-icon"
+              className="faction-thumb"
             />
             <span>
-              Você é o <strong>Jogador {playerID}</strong> — {faction.name}
+              Jogador <strong>{playerID}</strong> · {faction.name}
             </span>
           </div>
           {activeRules.length > 0 && (
@@ -339,7 +339,7 @@ function Board({ G, ctx, moves, playerID }: any) {
       </header>
 
       <main className="layout">
-        {/* Coluna esquerda */}
+        {/* Coluna esquerda — mão, mercado e ações do jogador */}
         <aside className="col-left">
           <section>
             <h3>Minha mão</h3>
@@ -366,14 +366,46 @@ function Board({ G, ctx, moves, playerID }: any) {
             </div>
           </section>
 
-          {asymmetric && (
+          {isPlay && (
             <section>
-              <h3>Vantagem da facção</h3>
-              <p className="hint">
-                No Confronto: +1 ou −1 em <strong>uma</strong> unidade{' '}
-                <strong>{TYPE_LABEL[faction.bonusType as MilitaryType]}</strong>{' '}
-                sua, <em>ou</em> alterar o tipo dela.
-              </p>
+              <h3>Mercado</h3>
+              {isMyTurn && !hasAdvanced && (
+                <p className="hint">
+                  Jogue uma carta em um objetivo antes de recrutar.
+                </p>
+              )}
+              <div className="market">
+                {G.market.map((id: string, i: number) => {
+                  const c = MILITARY_BY_ID[id];
+                  return (
+                    <Card
+                      key={id}
+                      src={c.image}
+                      alt={c.name}
+                      onClick={
+                        canRecruit
+                          ? () => moves.recruit('market', i)
+                          : undefined
+                      }
+                    />
+                  );
+                })}
+                <div
+                  className="deck-button"
+                  onClick={
+                    canRecruit ? () => moves.recruit('deck') : undefined
+                  }
+                  style={{ opacity: canRecruit ? 1 : 0.5 }}
+                >
+                  <img
+                    src={CARD_BACKS.military}
+                    alt="Deck militar"
+                    className="card-img"
+                    draggable={false}
+                  />
+                  <span>Deck</span>
+                </div>
+              </div>
             </section>
           )}
 
@@ -482,52 +514,9 @@ function Board({ G, ctx, moves, playerID }: any) {
               )}
             </section>
           )}
-
-          {isPlay && (
-            <section>
-              <h3>Mercado</h3>
-              {isMyTurn && !hasAdvanced && (
-                <p className="hint">
-                  Jogue uma carta em um objetivo antes de recrutar.
-                </p>
-              )}
-              <div className="market">
-                {G.market.map((id: string, i: number) => {
-                  const c = MILITARY_BY_ID[id];
-                  return (
-                    <Card
-                      key={id}
-                      src={c.image}
-                      alt={c.name}
-                      onClick={
-                        canRecruit
-                          ? () => moves.recruit('market', i)
-                          : undefined
-                      }
-                    />
-                  );
-                })}
-                <div
-                  className="deck-button"
-                  onClick={
-                    canRecruit ? () => moves.recruit('deck') : undefined
-                  }
-                  style={{ opacity: canRecruit ? 1 : 0.5 }}
-                >
-                  <img
-                    src={CARD_BACKS.military}
-                    alt="Deck militar"
-                    className="card-img"
-                    draggable={false}
-                  />
-                  <span>Comprar do deck</span>
-                </div>
-              </div>
-            </section>
-          )}
         </aside>
 
-        {/* Coluna central */}
+        {/* Coluna central — campo de batalha */}
         <section className="col-center">
           <h3>Campo de Batalha</h3>
           <div className="battlefield">
@@ -578,13 +567,7 @@ function Board({ G, ctx, moves, playerID }: any) {
                         : `J${att.playerId}`;
 
                       return (
-                        <div
-                          key={i}
-                          className="mini"
-                          /* A key={i} garante que uma nova carta no slot
-                             recebe um novo índice e dispara a animação
-                             `attachIn` no mount. */
-                        >
+                        <div key={i} className="mini">
                           <img
                             src={src}
                             alt={
@@ -611,7 +594,7 @@ function Board({ G, ctx, moves, playerID }: any) {
           </div>
         </section>
 
-        {/* Coluna direita */}
+        {/* Coluna direita — jogadores e último confronto */}
         <aside className="col-right">
           <section>
             <h3>Jogadores</h3>
@@ -626,12 +609,15 @@ function Board({ G, ctx, moves, playerID }: any) {
                     <img
                       src={f.image}
                       alt={f.name}
-                      className="faction-icon"
+                      className="player-faction-card"
                     />
                     <div>
                       <div>
                         <strong>{playerName(G, pid)}</strong>
                         {pid === playerID && solo ? ' (você)' : ''}
+                      </div>
+                      <div className="player-faction-name">
+                        {f.name}
                       </div>
                       <div>{p.objectivesWon.length} objetivo(s)</div>
                     </div>
