@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { CSSProperties, MouseEvent, PointerEvent as ReactPointerEvent } from 'react';
-import type { GameOptions, MilitaryType, AutomaDifficulty } from './game/types';
 import { Client } from 'boardgame.io/react';
 import { Local } from 'boardgame.io/multiplayer';
 import {
@@ -26,7 +25,7 @@ import {
   MILITARY_TYPES,
   TYPE_LABEL,
 } from './game/combos';
-import type { GameOptions, MilitaryType } from './game/types';
+import type { GameOptions, MilitaryType, AutomaDifficulty } from './game/types';
 import SetupIntro from './ui/SetupIntro';
 import ConfrontIntro from './ui/ConfrontIntro';
 import VictoryModal from './ui/VictoryModal';
