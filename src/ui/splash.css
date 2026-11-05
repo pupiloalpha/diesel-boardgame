@@ -1,0 +1,213 @@
+/* =========================================================
+   Abertura (splash) com a arte da caixa — D.I.E.S.E.L.
+   Usa as variáveis de paleta definidas em App.css.
+   ========================================================= */
+
+.splash {
+  position: fixed;
+  inset: 0;
+  z-index: 500;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  overflow: hidden;
+  cursor: pointer;
+  background:
+    radial-gradient(ellipse at 50% 115%, rgba(var(--rust-rgb), 0.28), transparent 55%),
+    radial-gradient(circle at 50% 35%, rgba(var(--steel-rgb), 0.95), rgb(var(--void-rgb)) 75%);
+}
+
+.splash-stage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+
+/* ---------- Moldura da caixa ---------- */
+
+.splash-frame {
+  position: relative;
+  width: min(90vw, calc(72vh * 2 / 3), 520px);
+  aspect-ratio: 2 / 3;
+  overflow: hidden;
+  opacity: 0; /* só aparece depois que a imagem carregou */
+  border: 2px solid var(--border-lit);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-lg);
+}
+
+.splash-frame img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  user-select: none;
+}
+
+/* Reflexo metálico que cruza a caixa uma vez */
+.splash-frame::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  transform: translateX(-130%);
+  background: linear-gradient(
+    105deg,
+    transparent 38%,
+    rgba(var(--brass-bright-rgb), 0.32) 50%,
+    transparent 62%
+  );
+}
+
+/* ---------- Entrada ---------- */
+
+.splash.is-loaded .splash-frame {
+  animation:
+    boxIn 1.4s cubic-bezier(0.2, 0.85, 0.25, 1) both,
+    boxGlow 3.2s ease-in-out 1.4s infinite;
+}
+
+.splash.is-loaded .splash-frame::after {
+  animation: boxSheen 1.6s ease-in-out 1.2s 1 both;
+}
+
+.splash.is-loaded .splash-actions {
+  animation: splashRise 0.8s ease 1.6s both;
+}
+
+@keyframes boxIn {
+  0% {
+    opacity: 0;
+    transform: translateY(46px) scale(0.84);
+    filter: blur(8px) brightness(0.35);
+  }
+  60% { opacity: 1; }
+  100% {
+    opacity: 1;
+    transform: none;
+    filter: none;
+  }
+}
+
+@keyframes boxGlow {
+  0%, 100% { box-shadow: var(--shadow-lg), 0 0 18px rgba(var(--amber-rgb), 0.15); }
+  50% { box-shadow: var(--shadow-lg), 0 0 52px rgba(var(--amber-rgb), 0.45); }
+}
+
+@keyframes boxSheen {
+  from { transform: translateX(-130%); }
+  to { transform: translateX(130%); }
+}
+
+@keyframes splashRise {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: none; }
+}
+
+/* ---------- Botão e dica ---------- */
+
+.splash-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  opacity: 0;
+}
+
+.splash-btn {
+  display: inline-block;
+  width: auto;
+  margin: 0;
+  padding: 0.65rem 2.2rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  background: var(--grad-cta);
+  color: var(--ink);
+  border-color: var(--brass-bright);
+}
+
+.splash.is-loaded .splash-btn {
+  animation: pulseBtn 1.8s ease-in-out 2.4s infinite;
+}
+
+.splash-hint {
+  margin: 0;
+  font-size: var(--fs-xs);
+  letter-spacing: 0.08em;
+  color: var(--parchment-dim);
+}
+
+/* ---------- Saída (declarada depois, para prevalecer) ---------- */
+
+.splash.is-leaving {
+  pointer-events: none;
+  animation: splashOut 1s ease-in-out forwards;
+}
+
+.splash.is-leaving .splash-frame {
+  animation: boxOut 0.9s cubic-bezier(0.5, 0, 0.8, 0.35) forwards;
+}
+
+.splash.is-leaving .splash-frame::after { animation: none; }
+
+.splash.is-leaving .splash-actions {
+  animation: splashFadeOut 0.3s ease forwards;
+}
+
+@keyframes splashOut {
+  0%, 25% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+@keyframes boxOut {
+  0% { opacity: 1; transform: none; filter: none; }
+  100% {
+    opacity: 0;
+    transform: translateY(-26px) scale(1.18);
+    filter: blur(6px) brightness(1.5);
+  }
+}
+
+@keyframes splashFadeOut {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+/* =========================================================
+   Menu principal: espera a abertura e entra em seguida
+   (seletor duplo para prevalecer sobre .lobby de App.css)
+   ========================================================= */
+
+.lobby.lobby-wait {
+  opacity: 0;
+  visibility: hidden;
+  animation: none;
+}
+
+.lobby.lobby-reveal {
+  animation: lobbyIn 0.9s cubic-bezier(0.2, 0.85, 0.25, 1) 0.25s both;
+}
+
+@keyframes lobbyIn {
+  from { opacity: 0; transform: translateY(24px) scale(0.97); }
+  to { opacity: 1; transform: none; }
+}
+
+/* =========================================================
+   Acessibilidade: respeita "reduzir movimento"
+   ========================================================= */
+
+@media (prefers-reduced-motion: reduce) {
+  .splash,
+  .splash-frame,
+  .splash-frame::after,
+  .splash-actions,
+  .splash-btn,
+  .lobby.lobby-reveal {
+    animation-duration: 0.01ms !important;
+    animation-delay: 0ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}

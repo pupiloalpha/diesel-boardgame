@@ -289,8 +289,58 @@ function fixAutomaSlots(G: GameState, removedIdx: number) {
   }
 }
 
-function totalPV(G: GameState, pid: string): number {
+export function totalPV(G: Pick<GameState, 'players'>, pid: string): number {
   return G.players[pid].objectivesWon.reduce((sum, objId) => sum + (OBJECTIVE_BY_ID[objId]?.pv ?? 0), 0);
+}
+
+export interface Standing {
+  playerId: string;
+  pv: number;
+  objectives: number;
+}
+
+/**
+ * Classificação por Pontos de Vitória (maior primeiro).
+ * Empate: vence o jogador mais distante do Primeiro Jogador no sentido horário
+ * (único critério de desempate previsto no manual).
+ * `pool` restringe a classificação a alguns jogadores (ex.: só autômatos no modo solo).
+ */
+export function rankPlayers(
+  G: Pick<GameState, 'players' | 'firstPlayer'>,
+  pool?: string[],
+): Standing[] {
+  const n = Object.keys(G.players).length;
+  const distance = (pid: string) => (Number(pid) - Number(G.firstPlayer) + n) % n;
+  return (pool ?? Object.keys(G.players))
+    .map((playerId) => ({
+      playerId,
+      pv: totalPV(G, playerId),
+      objectives: G.players[playerId].objectivesWon.length,
+    }))
+    .sort((a, b) => b.pv - a.pv || distance(b.playerId) - distance(a.playerId));
+}
+
+/** Cartas de Objetivo ainda em disputa (deck + Campo de Batalha). */
+export function remainingObjectives(G: Pick<GameState, 'objectiveDeck' | 'battlefield'>): number {
+  return G.objectiveDeck.length + G.battlefield.length;
+}
+
+/**
+ * Etapa 4 — SUPREMACIA.
+ * Se a última Carta de Objetivo foi conquistada, a partida termina e vence
+ * quem tem mais PV. Caso contrário, nada acontece e o turno segue.
+ */
+function checkSupremacy(G: GameState) {
+  if (remainingObjectives(G) > 0) return;
+
+  G.gameOver = true;
+  if (G.options.solo && G.players['0'].objectivesWon.length >= G.totalObjectives) {
+    G.winnerId = '0';
+    return;
+  }
+  const ids = Object.keys(G.players);
+  const pool = G.options.solo ? ids.filter((id) => G.players[id].isAutoma) : ids;
+  G.winnerId = rankPlayers(G, pool)[0].playerId;
 }
 
 function resolveConfront(G: GameState, numPlayers: number) {
@@ -335,16 +385,8 @@ function resolveConfront(G: GameState, numPlayers: number) {
   if (nextObj) G.battlefield[slotIdx] = { objectiveId: nextObj, attachments: [] };
   else { G.battlefield.splice(slotIdx, 1); fixAutomaSlots(G, slotIdx); }
 
-  if (G.objectiveDeck.length === 0 && G.battlefield.length === 0) {
-    G.gameOver = true;
-    if (G.options.solo && G.players['0'].objectivesWon.length >= G.totalObjectives) {
-      G.winnerId = '0';
-    } else {
-      const ids = Object.keys(G.players);
-      const pool = G.options.solo ? ids.filter((id) => G.players[id].isAutoma) : ids;
-      G.winnerId = pool.reduce((best, id) => (totalPV(G, id) > totalPV(G, best) ? id : best), pool[0]);
-    }
-  }
+  // Etapa 4 — Supremacia (logo após a Conquista)
+  checkSupremacy(G);
 
   const result: ConfrontResult = {
     objectiveId, winnerId: winner?.playerId ?? '', participants,

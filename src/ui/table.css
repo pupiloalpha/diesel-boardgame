@@ -23,7 +23,7 @@
   align-items: center;
   padding-top: 2.5rem;
   pointer-events: none;
-  background: radial-gradient(ellipse at 50% 100%, rgba(10, 8, 5, 0.9), transparent 70%);
+  background: radial-gradient(ellipse at 50% 100%, rgba(var(--void-rgb), 0.9), transparent 70%);
 }
 
 .hand-label {
@@ -220,12 +220,12 @@
 .mini-tag {
   bottom: 3px;
   color: var(--ink);
-  background: rgba(242, 206, 122, 0.92);
+  background: rgba(var(--brass-bright-rgb), 0.92);
 }
 
 .mini-mod {
   top: 3px;
   color: var(--brass-bright);
-  background: rgba(40, 24, 8, 0.92);
-  border: 1px solid rgba(201, 169, 97, 0.5);
+  background: rgba(var(--void-rgb), 0.92);
+  border: 1px solid rgba(var(--brass-rgb), 0.5);
 }

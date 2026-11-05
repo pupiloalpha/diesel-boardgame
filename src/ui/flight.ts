@@ -28,6 +28,13 @@ export function boxOf(el: Element): Box {
   return { left: cx - w / 2, top: cy - h / 2, width: w, height: h };
 }
 
+/** Lê uma variável CSS da paleta (App.css), com valor de reserva. */
+function cssVar(name: string, fallback: string): string {
+  if (typeof window === 'undefined') return fallback;
+  const v = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  return v || fallback;
+}
+
 interface FlyOptions {
   src: string;
   from: Box;
@@ -45,6 +52,9 @@ export function flyCard({
 
   if (swapTo) new Image().src = swapTo; // pré-carrega
 
+  const brass = cssVar('--brass', '#b5ab90');
+  const glow = cssVar('--amber-rgb', '242, 163, 58');
+
   const img = document.createElement('img');
   img.src = src;
   img.alt = '';
@@ -57,8 +67,8 @@ export function flyCard({
     height: `${from.height}px`,
     objectFit: 'cover',
     borderRadius: '6px',
-    border: '2px solid #c9a961',
-    boxShadow: '0 12px 30px rgba(0,0,0,.7), 0 0 20px rgba(242,206,122,.55)',
+    border: `2px solid ${brass}`,
+    boxShadow: `0 12px 30px rgba(0,0,0,.7), 0 0 20px rgba(${glow}, .55)`,
     zIndex: '400',
     pointerEvents: 'none',
     willChange: 'transform',

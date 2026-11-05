@@ -28,7 +28,7 @@
   --cw: clamp(46px, 7.2vw, 78px);
   --su-gap: 0.6rem;
   --step: calc(var(--cw) + var(--su-gap));
-  background: radial-gradient(circle at 50% 25%, rgba(58, 44, 24, 0.97), rgba(10, 8, 5, 0.99) 70%);
+  background: radial-gradient(circle at 50% 25%, rgba(var(--steel-rgb), 0.97), rgba(var(--void-rgb), 0.99) 70%);
 }
 
 .su-panel {
@@ -37,10 +37,10 @@
   display: grid;
   gap: 0.75rem;
   padding: 1rem 1.25rem;
-  background: linear-gradient(180deg, rgba(42, 32, 22, 0.7), rgba(15, 10, 6, 0.95));
+  background: linear-gradient(180deg, rgba(var(--steel-rgb), 0.7), rgba(var(--void-rgb), 0.95));
   border: 2px solid var(--border-lit);
   border-radius: var(--radius);
-  box-shadow: var(--shadow-lg), 0 0 40px rgba(255, 179, 71, 0.12);
+  box-shadow: var(--shadow-lg), 0 0 40px rgba(var(--amber-rgb), 0.12);
 }
 
 .su-header {
@@ -169,7 +169,7 @@
   height: 100%;
   object-fit: cover;
   border-radius: 5px;
-  border: 1px solid #2c2115;
+  border: 1px solid var(--card-edge);
   box-shadow: var(--shadow-sm);
   user-select: none;
 }
@@ -255,14 +255,14 @@
   font-weight: 600;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  background: linear-gradient(135deg, var(--brass), #a88544);
+  background: var(--grad-cta);
   color: var(--ink);
   border-color: var(--brass-bright);
   animation: pulseBtn 1.8s ease-in-out infinite;
 }
 
 @keyframes pulseBtn {
-  0%, 100% { box-shadow: 0 0 0 rgba(242, 206, 122, 0); }
+  0%, 100% { box-shadow: 0 0 0 rgba(var(--brass-bright-rgb), 0); }
   50% { box-shadow: var(--glow-brass); }
 }
 
@@ -271,7 +271,7 @@
    ========================================================= */
 
 .ci-overlay {
-  background: rgba(5, 3, 1, 0.8);
+  background: rgba(var(--void-rgb), 0.8);
   backdrop-filter: blur(3px);
 }
 
@@ -279,10 +279,10 @@
   width: min(760px, 100%);
   margin: auto;
   padding: 1.5rem 1.75rem;
-  background: linear-gradient(145deg, rgba(40, 29, 18, 0.99), rgba(14, 10, 6, 0.99));
+  background: linear-gradient(145deg, rgba(var(--steel-rgb), 0.99), rgba(var(--void-rgb), 0.99));
   border: 2px solid var(--brass);
   border-radius: var(--radius);
-  box-shadow: var(--shadow-lg), 0 0 50px rgba(193, 92, 51, 0.28);
+  box-shadow: var(--shadow-lg), 0 0 50px rgba(var(--rust-rgb), 0.28);
   animation: modalPop 0.45s cubic-bezier(0.2, 0.9, 0.3, 1.15) both;
 }
 
@@ -302,7 +302,7 @@
   margin: 0.15rem 0 0.35rem;
   font-size: var(--fs-xl);
   color: var(--brass-bright);
-  text-shadow: 0 0 18px rgba(255, 179, 71, 0.35);
+  text-shadow: 0 0 18px rgba(var(--amber-rgb), 0.35);
 }
 
 .ci-lead {
@@ -328,8 +328,8 @@
 }
 
 @keyframes pulseCard {
-  0%, 100% { box-shadow: var(--shadow-md), 0 0 10px rgba(255, 179, 71, 0.35); }
-  50% { box-shadow: var(--shadow-md), 0 0 26px rgba(255, 179, 71, 0.75); }
+  0%, 100% { box-shadow: var(--shadow-md), 0 0 10px rgba(var(--amber-rgb), 0.35); }
+  50% { box-shadow: var(--shadow-md), 0 0 26px rgba(var(--amber-rgb), 0.75); }
 }
 
 .ci-objective p {
@@ -423,7 +423,7 @@
   font-weight: 600;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  background: linear-gradient(135deg, var(--brass), #a88544);
+  background: var(--grad-cta);
   color: var(--ink);
   border-color: var(--brass-bright);
 }
@@ -437,7 +437,7 @@
    ========================================================= */
 
 .vm-overlay {
-  background: radial-gradient(circle at 50% 40%, rgba(70, 50, 22, 0.97), rgba(8, 6, 3, 0.99) 72%);
+  background: radial-gradient(circle at 50% 40%, rgba(var(--steel-rgb), 0.97), rgba(var(--void-rgb), 0.99) 72%);
 }
 
 .vm-modal {
@@ -445,16 +445,16 @@
   margin: auto;
   padding: 1.5rem 1.75rem 1.75rem;
   text-align: center;
-  background: linear-gradient(180deg, rgba(58, 46, 30, 0.55), rgba(18, 13, 8, 0.96));
+  background: linear-gradient(180deg, rgba(var(--steel-rgb), 0.55), rgba(var(--void-rgb), 0.96));
   border: 2px solid var(--brass-bright);
   border-radius: var(--radius);
-  box-shadow: var(--shadow-lg), 0 0 60px rgba(255, 179, 71, 0.22);
+  box-shadow: var(--shadow-lg), 0 0 60px rgba(var(--amber-rgb), 0.22);
   animation: modalPop 0.7s cubic-bezier(0.2, 0.9, 0.3, 1.1) both;
 }
 
 .vm-modal.defeat {
   border-color: var(--rust);
-  box-shadow: var(--shadow-lg), 0 0 60px rgba(193, 92, 51, 0.3);
+  box-shadow: var(--shadow-lg), 0 0 60px rgba(var(--rust-rgb), 0.3);
 }
 
 .vm-modal h1 { margin: 0; }
@@ -478,7 +478,7 @@
   border-radius: 50%;
   background: repeating-conic-gradient(
     from 0deg,
-    rgba(255, 190, 90, 0.28) 0deg 8deg,
+    rgba(var(--amber-rgb), 0.28) 0deg 8deg,
     transparent 8deg 22deg
   );
   -webkit-mask-image: radial-gradient(circle, #000 15%, transparent 70%);
@@ -536,8 +536,8 @@
 }
 
 @keyframes championGlow {
-  0%, 100% { box-shadow: 0 0 18px rgba(242, 206, 122, 0.55), 0 0 40px rgba(255, 179, 71, 0.25); }
-  50% { box-shadow: 0 0 34px rgba(242, 206, 122, 0.95), 0 0 80px rgba(255, 179, 71, 0.5); }
+  0%, 100% { box-shadow: 0 0 18px rgba(var(--brass-bright-rgb), 0.55), 0 0 40px rgba(var(--amber-rgb), 0.25); }
+  50% { box-shadow: 0 0 34px rgba(var(--brass-bright-rgb), 0.95), 0 0 80px rgba(var(--amber-rgb), 0.5); }
 }
 
 .vm-spark {
@@ -569,7 +569,7 @@
   color: var(--brass-bright);
   font-family: Georgia, 'Times New Roman', serif;
   letter-spacing: 0.08em;
-  text-shadow: 0 0 16px rgba(255, 179, 71, 0.45);
+  text-shadow: 0 0 16px rgba(var(--amber-rgb), 0.45);
 }
 
 .vm-rank {
@@ -593,7 +593,7 @@
 
 .vm-rank li.winner {
   border-color: var(--brass-bright);
-  background: rgba(201, 169, 97, 0.12);
+  background: rgba(var(--brass-rgb), 0.12);
 }
 
 .vm-rank img {
@@ -616,7 +616,7 @@
   font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  background: linear-gradient(135deg, var(--brass), #a88544);
+  background: var(--grad-cta);
   color: var(--ink);
   border-color: var(--brass-bright);
 }

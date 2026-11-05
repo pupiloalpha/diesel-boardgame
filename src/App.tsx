@@ -10,6 +10,7 @@ import {
   validateSwap,
   conflictThreshold,
   isCardForbidden,
+  totalPV,
 } from './game/game';
 import {
   MILITARY_BY_ID,
@@ -27,6 +28,9 @@ import type { GameOptions, MilitaryType } from './game/types';
 import SetupIntro from './ui/SetupIntro';
 import ConfrontIntro from './ui/ConfrontIntro';
 import VictoryModal from './ui/VictoryModal';
+import SplashScreen from './ui/SplashScreen';
+import DominioPanel from './ui/DominioPanel';
+import SupremaciaModal from './ui/SupremaciaModal';
 import {
   BF_ZOOM_MAX,
   BF_ZOOM_MIN,
@@ -42,6 +46,7 @@ import type { Box } from './ui/flight';
 import './App.css';
 import './ui/animations.css';
 import './ui/table.css';
+import './ui/dominio.css';
 
 const PHASE_LABEL: Record<string, string> = {
   play: 'Jogada',
@@ -81,7 +86,7 @@ function Banner({ data }: { data: BannerData | null }) {
   );
 }
 
-function StepIndicator({ G, ctx }: any) {
+function StepIndicator({ G, ctx, supremacy }: any) {
   const inPlay = ctx.phase === 'play';
   const confront = !!G.pendingConfront;
   const inConfrontPhase = ctx.phase === 'reinforce' || ctx.phase === 'modify';
@@ -95,6 +100,7 @@ function StepIndicator({ G, ctx }: any) {
       <div className={`step ${step1Active ? 'active' : step1Done ? 'done' : ''}`}>1 · Avanço</div>
       <div className={`step ${step2Active ? 'active' : step2Done ? 'done' : ''}`}>2 · Recrutamento</div>
       <div className={`step ${step3Active ? 'active' : ''}`}>3 · Confronto</div>
+      <div className={`step ${supremacy ? 'active' : ''}`}>4 · Supremacia</div>
     </div>
   );
 }
@@ -138,8 +144,14 @@ function Board({ G, ctx, moves, playerID, onExit }: any) {
     () => playerID === '0' && ctx.turn <= 1 && ctx.phase === 'play' && !G.gameOver,
   );
   const [confrontIntro, setConfrontIntro] = useState(false);
+  /* Etapa 4 (Supremacia): aberta após cada Conquista; no fim da partida
+     antecede a tela de vitória. */
+  const [supremacyOpen, setSupremacyOpen] = useState(false);
+  const [endSeen, setEndSeen] = useState(false);
+  /* Domínio exibido no painel (null = o meu). */
+  const [inspectPid, setInspectPid] = useState<string | null>(null);
 
-  const overlayOpen = introOpen || confrontIntro;
+  const overlayOpen = introOpen || confrontIntro || supremacyOpen;
   const uiBlocked = useUiBlocked();
   const automaActs = isMyTurn && iAmAutoma && !G.gameOver && !uiBlocked;
 
@@ -149,7 +161,7 @@ function Board({ G, ctx, moves, playerID, onExit }: any) {
     bannerTimer.current = window.setTimeout(() => setBanner(null), 1800);
   };
 
-  useEffect(() => { setSelected(null); }, [ctx.currentPlayer]);
+  useEffect(() => { setSelected(null); setInspectPid(null); }, [ctx.currentPlayer]);
 
   useEffect(() => {
     if (!overlayOpen) return;
@@ -211,8 +223,7 @@ function Board({ G, ctx, moves, playerID, onExit }: any) {
     if (ctx.phase === 'reinforce') setConfrontIntro(true);
     else if (ctx.phase === 'modify') showBanner('Modificações', 'Facção / Objetivo', 'phase');
     else if (ctx.phase === 'play' && (prev === 'reinforce' || prev === 'modify') && G.lastConfront) {
-      const obj = OBJECTIVE_BY_ID[G.lastConfront.objectiveId];
-      showBanner(`${playerName(G, G.lastConfront.winnerId)} venceu`, obj?.name ?? 'Confronto resolvido', 'result');
+      setSupremacyOpen(true); // Etapa 4 — Supremacia
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ctx.phase, isViewer]);
@@ -286,7 +297,10 @@ function Board({ G, ctx, moves, playerID, onExit }: any) {
   };
 
   if (G.gameOver) {
-    return playerID === '0' ? <VictoryModal G={G} onExit={onExit} /> : null;
+    if (playerID !== '0') return null;
+    return endSeen
+      ? <VictoryModal G={G} onExit={onExit} />
+      : <SupremaciaModal G={G} onContinue={() => setEndSeen(true)} />;
   }
   if (!isViewer) return null;
 
@@ -295,6 +309,7 @@ function Board({ G, ctx, moves, playerID, onExit }: any) {
 
   const faction = FACTION_BY_ID[me.factionId];
   const asymmetric: boolean = G.options.asymmetric;
+  const inspected: string = inspectPid && G.players[inspectPid] ? inspectPid : playerID;
 
   const isPlay = ctx.phase === 'play';
   const isReinforce = ctx.phase === 'reinforce';
@@ -441,6 +456,13 @@ function Board({ G, ctx, moves, playerID, onExit }: any) {
       {confrontIntro && G.pendingConfront && (
         <ConfrontIntro G={G} onContinue={() => setConfrontIntro(false)} />
       )}
+      {supremacyOpen && G.lastConfront && (
+        <SupremaciaModal
+          G={G}
+          nextPlayer={ctx.currentPlayer}
+          onContinue={() => setSupremacyOpen(false)}
+        />
+      )}
 
       <header className="topbar">
         <div className="topbar-row">
@@ -457,7 +479,7 @@ function Board({ G, ctx, moves, playerID, onExit }: any) {
           </div>
           <div className="topbar-actions"><button onClick={onExit}>Voltar ao Menu</button></div>
         </div>
-        <StepIndicator G={G} ctx={ctx} />
+        <StepIndicator G={G} ctx={ctx} supremacy={supremacyOpen} />
       </header>
 
       <main className="layout">
@@ -666,8 +688,21 @@ function Board({ G, ctx, moves, playerID, onExit }: any) {
             <ul className="players">
               {Object.entries(G.players).map(([pid, p]: any) => {
                 const f = FACTION_BY_ID[p.factionId];
+                const inspect = () => setInspectPid(pid === playerID ? null : pid);
                 return (
-                  <li key={pid} className={pid === ctx.currentPlayer ? 'current' : ''}>
+                  <li key={pid}
+                    className={[
+                      pid === ctx.currentPlayer ? 'current' : '',
+                      'inspectable',
+                      pid === inspected ? 'inspected' : '',
+                    ].join(' ')}
+                    role="button" tabIndex={0}
+                    aria-pressed={pid === inspected}
+                    title="Ver o Domínio deste jogador"
+                    onClick={inspect}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); inspect(); }
+                    }}>
                     <img src={f.image} alt={f.name} className="player-faction-card" />
                     <div>
                       <div>
@@ -675,13 +710,24 @@ function Board({ G, ctx, moves, playerID, onExit }: any) {
                         {pid === playerID && solo ? ' (você)' : ''}
                       </div>
                       <div className="player-faction-name">{f.name}</div>
-                      <div>{p.objectivesWon.length} objetivo(s)</div>
+                      <div>{totalPV(G, pid)} PV · {p.objectivesWon.length} objetivo(s)</div>
+                      {p.objectivesWon.length > 0 && (
+                        <div className="dm-chips">
+                          {p.objectivesWon.map((id: string, i: number) => (
+                            <img key={`${id}-${i}`} src={OBJECTIVE_BY_ID[id].image}
+                              alt={OBJECTIVE_BY_ID[id].name} title={OBJECTIVE_BY_ID[id].name}
+                              draggable={false} />
+                          ))}
+                        </div>
+                      )}
                     </div>
                   </li>
                 );
               })}
             </ul>
           </section>
+
+          <DominioPanel G={G} pid={inspected} mine={inspected === playerID} />
 
           {G.lastConfront && (
             <section key={confrontKey} className="confront-result">
@@ -731,7 +777,7 @@ function Board({ G, ctx, moves, playerID, onExit }: any) {
 /* Lobby                                                               */
 /* ------------------------------------------------------------------ */
 
-function Lobby({ onStart }: { onStart: (o: GameOptions) => void }) {
+function Lobby({ onStart, reveal }: { onStart: (o: GameOptions) => void; reveal: boolean }) {
   const [solo, setSolo] = useState(false);
   const [numPlayers, setNumPlayers] = useState(4);
   const [automas, setAutomas] = useState(1);
@@ -739,7 +785,7 @@ function Lobby({ onStart }: { onStart: (o: GameOptions) => void }) {
   const [asymmetric, setAsymmetric] = useState(false);
 
   return (
-    <div className="lobby">
+    <div className={`lobby ${reveal ? 'lobby-reveal' : 'lobby-wait'}`}>
       <h1>D.I.E.S.E.L.</h1>
       <p className="hint">Distopia · Indústria · Estratégia · Supremacia · Energia · Leviatãs</p>
       <h3>Modo de jogo</h3>
@@ -804,5 +850,20 @@ function GameRoot({ options, onExit }: { options: GameOptions; onExit: () => voi
 export default function App() {
   const [options, setOptions] = useState<GameOptions | null>(null);
   const handleExit = useCallback(() => setOptions(null), []);
-  return options ? <GameRoot options={options} onExit={handleExit} /> : <Lobby onStart={setOptions} />;
+  // Abertura exibida uma única vez por visita: 'show' → 'leaving' → 'done'.
+  const [splash, setSplash] = useState<'show' | 'leaving' | 'done'>('show');
+
+  if (options) return <GameRoot options={options} onExit={handleExit} />;
+
+  return (
+    <>
+      <Lobby onStart={setOptions} reveal={splash !== 'show'} />
+      {splash !== 'done' && (
+        <SplashScreen
+          onLeaving={() => setSplash((s) => (s === 'show' ? 'leaving' : s))}
+          onDone={() => setSplash('done')}
+        />
+      )}
+    </>
+  );
 }

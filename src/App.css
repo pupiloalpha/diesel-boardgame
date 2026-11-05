@@ -1,31 +1,56 @@
 /* =========================================================
-   D.I.E.S.E.L. — Dieselpunk theme
+   D.I.E.S.E.L. — Tema Dieselpunk
+   Paleta extraída da arte da caixa do jogo.
+   Para ajustar o visual, altere SOMENTE o bloco :root abaixo:
+   todos os demais arquivos CSS usam estas variáveis.
    ========================================================= */
 
 :root {
-  /* --- palette --- */
-  --bg-0: #0a0805;
-  --bg-1: #17120d;
-  --bg-2: #241c14;
-  --bg-3: #352a1e;
-  --border: #3d3020;
-  --border-lit: #6d5738;
-  --brass: #c9a961;
-  --brass-bright: #f2ce7a;
-  --amber: #ffb347;
-  --rust: #c15c33;
-  --green: #7ac07a;
-  --parchment: #ebe0c6;
-  --parchment-dim: #a89978;
-  --ink: #100b06;
+  /* --- paleta: fundos (fuligem e aço da tempestade) --- */
+  --bg-0: #070705;            /* preto fuligem (fundo da página) */
+  --bg-1: #151511;            /* painéis */
+  --bg-2: #22221d;            /* superfícies elevadas */
+  --bg-3: #2f3532;            /* aço-chumbo (botões, campos) */
+  --border: #3a3c36;          /* contornos discretos */
+  --border-lit: #615e51;      /* contornos de metal envelhecido */
+
+  /* --- paleta: metais e fogo --- */
+  --brass: #b5ab90;           /* aço/latão envelhecido (letras do título) */
+  --brass-dark: #8f8566;      /* sombra do metal */
+  --brass-bright: #f0c874;    /* metal iluminado pelo fogo (destaques) */
+  --amber: #f2a33a;           /* brilho dos reatores e explosões */
+  --amber-dark: #c98a2e;      /* fim do gradiente dos botões principais */
+  --rust: #c9501f;            /* brasa / bandeira vermelha */
+  --bronze: #9b673b;          /* bronze das engrenagens */
+  --bronze-dark: #68482e;
+  --green: #6fb09a;           /* verdigris do mar (sucesso / jogada válida) */
+
+  /* --- paleta: texto --- */
+  --parchment: #e2dac2;       /* texto principal (creme do subtítulo) */
+  --parchment-dim: #968c75;   /* texto secundário */
+  --ink: #0b0a07;             /* texto sobre fundos claros */
+
+  /* --- mesmas cores em canais RGB, para uso em rgba(var(--x-rgb), alfa) --- */
+  --void-rgb: 7, 7, 5;
+  --soot-rgb: 21, 21, 17;
+  --steel-rgb: 47, 53, 50;
+  --brass-rgb: 181, 171, 144;
+  --brass-bright-rgb: 240, 200, 116;
+  --amber-rgb: 242, 163, 58;
+  --rust-rgb: 201, 80, 31;
+  --green-rgb: 111, 176, 154;
+
+  /* --- gradientes reutilizáveis --- */
+  --grad-cta: linear-gradient(135deg, var(--amber), var(--amber-dark));
+  --card-edge: #24231d;
 
   /* --- shadows --- */
   --shadow-sm: 0 2px 6px rgba(0, 0, 0, 0.55);
   --shadow-md: 0 6px 18px rgba(0, 0, 0, 0.65);
   --shadow-lg: 0 12px 36px rgba(0, 0, 0, 0.8);
-  --glow-amber: 0 0 18px rgba(255, 179, 71, 0.55);
-  --glow-brass: 0 0 14px rgba(242, 206, 122, 0.6);
-  --glow-green: 0 0 14px rgba(122, 192, 122, 0.6);
+  --glow-amber: 0 0 18px rgba(var(--amber-rgb), 0.55);
+  --glow-brass: 0 0 14px rgba(var(--brass-bright-rgb), 0.6);
+  --glow-green: 0 0 14px rgba(var(--green-rgb), 0.6);
 
   /* --- type scale --- */
   --fs-xs: 0.7rem;
@@ -76,8 +101,8 @@ html, body {
 body {
   font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   background:
-    radial-gradient(circle at 20% 0%, rgba(58, 44, 24, 0.6) 0%, transparent 55%),
-    radial-gradient(circle at 80% 100%, rgba(122, 54, 28, 0.25) 0%, transparent 60%),
+    radial-gradient(circle at 20% 0%, rgba(var(--steel-rgb), 0.6) 0%, transparent 55%),
+    radial-gradient(circle at 80% 100%, rgba(var(--rust-rgb), 0.25) 0%, transparent 60%),
     var(--bg-0);
   color: var(--parchment);
   min-height: 100vh;
@@ -120,10 +145,10 @@ body {
   padding: 0.85rem 1rem;
   margin-bottom: 1rem;
   background:
-    linear-gradient(180deg, rgba(58, 46, 30, 0.5), rgba(23, 18, 13, 0.9)),
+    linear-gradient(180deg, rgba(var(--steel-rgb), 0.5), rgba(var(--soot-rgb), 0.9)),
     repeating-linear-gradient(90deg,
       transparent 0, transparent 10px,
-      rgba(255, 220, 150, 0.015) 10px, rgba(255, 220, 150, 0.015) 11px);
+      rgba(var(--brass-rgb), 0.015) 10px, rgba(var(--brass-rgb), 0.015) 11px);
   border: 1px solid var(--border-lit);
   border-radius: var(--radius);
   box-shadow: var(--shadow-md);
@@ -244,8 +269,8 @@ body {
 
 .step.done {
   color: var(--green);
-  border-color: rgba(122, 192, 122, 0.45);
-  background: rgba(122, 192, 122, 0.08);
+  border-color: rgba(var(--green-rgb), 0.45);
+  background: rgba(var(--green-rgb), 0.08);
 }
 
 /* =========================================================
@@ -254,12 +279,12 @@ body {
 
 section {
   background:
-    linear-gradient(180deg, rgba(42, 32, 22, 0.55), rgba(23, 18, 13, 0.9)),
-    radial-gradient(circle at top right, rgba(255, 179, 71, 0.05), transparent 60%);
+    linear-gradient(180deg, rgba(var(--steel-rgb), 0.55), rgba(var(--soot-rgb), 0.9)),
+    radial-gradient(circle at top right, rgba(var(--amber-rgb), 0.05), transparent 60%);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: 0.9rem 1rem;
-  box-shadow: var(--shadow-sm), inset 0 1px 0 rgba(255, 220, 150, 0.05);
+  box-shadow: var(--shadow-sm), inset 0 1px 0 rgba(var(--brass-rgb), 0.05);
   position: relative;
   overflow: hidden;
 }
@@ -290,14 +315,14 @@ h3 {
   color: var(--brass);
   padding-bottom: 0.5rem;
   margin-bottom: 0.75rem;
-  border-bottom: 1px solid rgba(201, 169, 97, 0.18);
+  border-bottom: 1px solid rgba(var(--brass-rgb), 0.18);
 }
 
 h3::after {
   content: '';
   flex: 1;
   height: 1px;
-  background: linear-gradient(90deg, rgba(201, 169, 97, 0.4), transparent);
+  background: linear-gradient(90deg, rgba(var(--brass-rgb), 0.4), transparent);
 }
 
 .hint {
@@ -319,11 +344,11 @@ h3::after {
   aspect-ratio: 5 / 7;
   object-fit: cover;
   border-radius: var(--radius-sm);
-  border: 2px solid #2c2115;
+  border: 2px solid var(--card-edge);
   background: linear-gradient(145deg, var(--bg-2), var(--bg-1));
   box-shadow:
     var(--shadow-sm),
-    inset 0 0 0 1px rgba(255, 220, 150, 0.05);
+    inset 0 0 0 1px rgba(var(--brass-rgb), 0.05);
   transition:
     transform var(--t-base) ease,
     border-color var(--t-base) ease,
@@ -342,7 +367,7 @@ h3::after {
   box-shadow:
     var(--shadow-md),
     var(--glow-brass),
-    inset 0 0 0 1px rgba(255, 220, 150, 0.2);
+    inset 0 0 0 1px rgba(var(--brass-rgb), 0.2);
   transform: translateY(-6px) scale(1.02);
 }
 
@@ -353,8 +378,8 @@ h3::after {
 }
 
 @keyframes pulseGreen {
-  0%, 100% { box-shadow: var(--shadow-md), 0 0 10px rgba(122, 192, 122, 0.4); }
-  50% { box-shadow: var(--shadow-md), 0 0 22px rgba(122, 192, 122, 0.9); }
+  0%, 100% { box-shadow: var(--shadow-md), 0 0 10px rgba(var(--green-rgb), 0.4); }
+  50% { box-shadow: var(--shadow-md), 0 0 22px rgba(var(--green-rgb), 0.9); }
 }
 
 .card-img:hover { border-color: var(--brass); }
@@ -487,12 +512,12 @@ h3::after {
   margin-top: 3px;
   padding: 1px 6px;
   border-radius: 4px;
-  background: linear-gradient(135deg, #6d4a1e, #4a3010);
+  background: linear-gradient(135deg, var(--bronze-dark), #3f2d1d);
   color: var(--brass-bright);
   font-weight: 700;
   font-size: 0.65rem;
   letter-spacing: 0.05em;
-  border: 1px solid rgba(201, 169, 97, 0.4);
+  border: 1px solid rgba(var(--brass-rgb), 0.4);
 }
 
 /* =========================================================
@@ -521,13 +546,13 @@ h3::after {
 
 .players li.current {
   border-color: var(--brass);
-  background: rgba(201, 169, 97, 0.08);
+  background: rgba(var(--brass-rgb), 0.08);
   animation: pulsePlayer 2s ease-in-out infinite;
 }
 
 @keyframes pulsePlayer {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(242, 206, 122, 0.3); }
-  50% { box-shadow: 0 0 0 4px rgba(242, 206, 122, 0.15), var(--glow-brass); }
+  0%, 100% { box-shadow: 0 0 0 0 rgba(var(--brass-bright-rgb), 0.3); }
+  50% { box-shadow: 0 0 0 4px rgba(var(--brass-bright-rgb), 0.15), var(--glow-brass); }
 }
 
 .players li.current strong { color: var(--brass-bright); }
@@ -547,7 +572,7 @@ h3::after {
 
 .players li.current .player-faction-card {
   border-color: var(--brass-bright);
-  box-shadow: 0 0 8px rgba(242, 206, 122, 0.55);
+  box-shadow: 0 0 8px rgba(var(--brass-bright-rgb), 0.55);
 }
 
 .player-faction-name {
@@ -582,7 +607,7 @@ button {
 }
 
 button:hover:not(:disabled) {
-  background: linear-gradient(180deg, var(--brass), #a88544);
+  background: linear-gradient(180deg, var(--brass), var(--brass-dark));
   color: var(--ink);
   border-color: var(--brass-bright);
   box-shadow: var(--glow-brass);
@@ -640,13 +665,13 @@ button:disabled {
   min-width: 320px;
   text-align: center;
   background:
-    linear-gradient(145deg, rgba(35, 25, 15, 0.97), rgba(15, 10, 6, 0.99));
+    linear-gradient(145deg, rgba(var(--soot-rgb), 0.97), rgba(var(--void-rgb), 0.99));
   border: 2px solid var(--brass);
   border-radius: var(--radius);
   box-shadow:
     var(--shadow-lg),
-    inset 0 0 30px rgba(255, 179, 71, 0.12),
-    0 0 40px rgba(255, 179, 71, 0.25);
+    inset 0 0 30px rgba(var(--amber-rgb), 0.12),
+    0 0 40px rgba(var(--amber-rgb), 0.25);
   animation: bannerLife 1.75s ease forwards;
 }
 
@@ -654,8 +679,8 @@ button:disabled {
   border-color: var(--green);
   box-shadow:
     var(--shadow-lg),
-    inset 0 0 30px rgba(122, 192, 122, 0.12),
-    0 0 40px rgba(122, 192, 122, 0.25);
+    inset 0 0 30px rgba(var(--green-rgb), 0.12),
+    0 0 40px rgba(var(--green-rgb), 0.25);
 }
 
 .banner-title {
@@ -664,12 +689,12 @@ button:disabled {
   letter-spacing: 0.2em;
   text-transform: uppercase;
   color: var(--brass-bright);
-  text-shadow: 0 0 20px rgba(255, 179, 71, 0.4);
+  text-shadow: 0 0 20px rgba(var(--amber-rgb), 0.4);
 }
 
 .banner-result .banner-title {
   color: var(--green);
-  text-shadow: 0 0 20px rgba(122, 192, 122, 0.5);
+  text-shadow: 0 0 20px rgba(var(--green-rgb), 0.5);
 }
 
 .banner-subtitle {
@@ -723,7 +748,7 @@ button:disabled {
 .confront-result ul li.winner {
   border-left-color: var(--brass-bright);
   color: var(--brass-bright);
-  background: rgba(201, 169, 97, 0.1);
+  background: rgba(var(--brass-rgb), 0.1);
   font-weight: 600;
 }
 
@@ -736,7 +761,7 @@ button:disabled {
   margin: 4rem auto;
   padding: 2rem 2.5rem;
   background:
-    linear-gradient(180deg, rgba(58, 46, 30, 0.5), rgba(23, 18, 13, 0.9));
+    linear-gradient(180deg, rgba(var(--steel-rgb), 0.5), rgba(var(--soot-rgb), 0.9));
   border: 2px solid var(--border-lit);
   border-radius: var(--radius);
   text-align: center;
@@ -780,7 +805,7 @@ button:disabled {
   font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  background: linear-gradient(135deg, var(--brass), #a88544);
+  background: var(--grad-cta);
   color: var(--ink);
   border-color: var(--brass-bright);
 }
@@ -799,7 +824,7 @@ button:disabled {
   margin: 3rem auto;
   padding: 2rem 2.5rem;
   background:
-    linear-gradient(180deg, rgba(58, 46, 30, 0.5), rgba(23, 18, 13, 0.9));
+    linear-gradient(180deg, rgba(var(--steel-rgb), 0.5), rgba(var(--soot-rgb), 0.9));
   border: 2px solid var(--border-lit);
   border-radius: var(--radius);
   box-shadow: var(--shadow-lg);
@@ -834,7 +859,7 @@ button:disabled {
   transition: background var(--t-fast) ease;
 }
 
-.lobby label:hover { background: rgba(201, 169, 97, 0.08); }
+.lobby label:hover { background: rgba(var(--brass-rgb), 0.08); }
 
 .lobby input[type='checkbox'],
 .lobby input[type='radio'] {
@@ -862,7 +887,7 @@ button:disabled {
   font-weight: 600;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  background: linear-gradient(135deg, var(--brass), #a88544);
+  background: var(--grad-cta);
   color: var(--ink);
   border-color: var(--brass-bright);
 }
