@@ -189,7 +189,7 @@ export function validateSetValue(
 export function validateSwap(
   G: GameState,
   pid: string,
-  att: Attachment,
+  _att: Attachment,
   slot: BattlefieldSlot,
   newCardId: string,
 ): boolean {
