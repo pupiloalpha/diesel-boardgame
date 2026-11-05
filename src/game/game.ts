@@ -731,9 +731,14 @@ export function createDiesel(options: GameOptions): Game<GameState> {
               const slot = pendingSlot(G);
               if (!slot) return INVALID_MOVE;
               const mine = slot.attachments.filter((a) => a.playerId === pid);
+              const me = G.players[pid];
 
               let bestScore = scoreAttachments(mine);
-              let bestAction: { kind: 'modify'; att: Attachment; mod: Modification } | { kind: 'setValue'; att: Attachment; value: number } | null = null;
+              type BestAction =
+                | { kind: 'modify'; att: Attachment; mod: Modification }
+                | { kind: 'setValue'; att: Attachment; value: number }
+                | { kind: 'swap'; att: Attachment; newCardId: string };
+              let bestAction: BestAction | null = null;
 
               for (const att of mine) {
                 // +/- valor
@@ -772,13 +777,36 @@ export function createDiesel(options: GameOptions): Game<GameState> {
                     bestAction = { kind: 'setValue', att, value: v };
                   }
                 }
+                // troca por carta da mão (obj_10 — Controlador Temporal)
+                if (me.objectivesWon.includes('obj_10')) {
+                  for (const newCardId of me.hand) {
+                    if (!validateSwap(G, pid, att, slot, newCardId)) continue;
+                    const trial = mine.map((a) => ({ ...a }));
+                    const t = trial[mine.indexOf(att)];
+                    t.cardId = newCardId;
+                    t.valueMod = 0;
+                    t.typeOverride = null;
+                    const s = scoreAttachments(trial);
+                    if (compareScore(s, bestScore) > 0) {
+                      bestScore = s;
+                      bestAction = { kind: 'swap', att, newCardId };
+                    }
+                  }
+                }
               }
 
               if (bestAction) {
-                if (bestAction.kind === 'modify') applyModification(bestAction.att, bestAction.mod);
-                else {
+                if (bestAction.kind === 'modify') {
+                  applyModification(bestAction.att, bestAction.mod);
+                } else if (bestAction.kind === 'setValue') {
                   const base = MILITARY_BY_ID[bestAction.att.cardId];
                   bestAction.att.valueMod = bestAction.value - base.value;
+                } else if (bestAction.kind === 'swap') {
+                  me.hand = me.hand.filter((id) => id !== bestAction.newCardId);
+                  me.hand.push(bestAction.att.cardId);
+                  bestAction.att.cardId = bestAction.newCardId;
+                  bestAction.att.valueMod = 0;
+                  bestAction.att.typeOverride = null;
                 }
               }
               G.modifyDone.push(pid);

@@ -11,6 +11,7 @@ import {
   conflictThreshold,
   isCardForbidden,
   totalPV,
+  handSizeFor,
 } from './game/game';
 import {
   MILITARY_BY_ID,
@@ -154,7 +155,7 @@ function Board({ G, ctx, moves, playerID, onExit }: any) {
   const [inspectPid, setInspectPid] = useState<string | null>(null);
   const [manualOpen, setManualOpen] = useState(false);
 
-  const overlayOpen = introOpen || confrontIntro || supremacyOpen || manualOpen;;
+  const overlayOpen = introOpen || confrontIntro || supremacyOpen || manualOpen;
   const uiBlocked = useUiBlocked();
   const automaActs = isMyTurn && iAmAutoma && !G.gameOver && !uiBlocked;
 
@@ -235,16 +236,6 @@ function Board({ G, ctx, moves, playerID, onExit }: any) {
     if (bannerTimer.current) window.clearTimeout(bannerTimer.current);
   }, []);
 
-  /* ------------------------------------------------------------------ */
-  /* PAN do campo de batalha                                            */
-  /*                                                                    */
-  /* Não chamamos setPointerCapture no pointerdown — pointer capture    */
-  /* redireciona o pointerup para o .bf-scroll, e o navegador passa a   */
-  /* disparar o click no ancestral comum (o próprio .bf-scroll) em vez  */
-  /* do <img>. Isso engolia o clique na carta-objetivo. Só capturamos   */
-  /* o ponteiro DEPOIS de confirmar arrasto real (movimento > 4px).     */
-  /* ------------------------------------------------------------------ */
-
   const onBfPointerDown = (e: ReactPointerEvent<HTMLDivElement>) => {
     if (e.pointerType !== 'mouse' || e.button !== 0) return;
     const target = e.target as HTMLElement;
@@ -320,9 +311,16 @@ function Board({ G, ctx, moves, playerID, onExit }: any) {
   const hasAdvanced: boolean = G.hasAdvanced;
 
   const canAdvance = isMyTurn && isPlay && !hasAdvanced;
-  const canRecruit = isMyTurn && isPlay && hasAdvanced && me.hand.length < 4;
-  const canReinforce = isMyTurn && isReinforce && playerID !== G.confrontTriggeredBy && !G.reinforcePassed.includes(playerID);
-  const canModify = isMyTurn && isModify && G.modifyQueue.includes(playerID) && !G.modifyDone.includes(playerID);
+  const canRecruit =
+    isMyTurn && isPlay && hasAdvanced && me.hand.length < handSizeFor(G, playerID);
+  const canReinforce =
+    isMyTurn && isReinforce &&
+    playerID !== G.confrontTriggeredBy &&
+    !G.reinforcePassed.includes(playerID);
+  const canModify =
+    isMyTurn && isModify &&
+    G.modifyQueue.includes(playerID) &&
+    !G.modifyDone.includes(playerID);
 
   const contested = G.pendingConfront ? OBJECTIVE_BY_ID[G.pendingConfront] : null;
   const confrontSlot = G.pendingConfront ? G.battlefield.find((s: any) => s.objectiveId === G.pendingConfront) : null;
@@ -466,7 +464,7 @@ function Board({ G, ctx, moves, playerID, onExit }: any) {
           onContinue={() => setSupremacyOpen(false)}
         />
       )}
-      {manualOpen && <ManualModal onClose={() => setManualOpen(false)} />}   {/* ← NOVO */}
+      {manualOpen && <ManualModal onClose={() => setManualOpen(false)} />}
 
       <header className="topbar">
         <div className="topbar-row">
@@ -490,10 +488,6 @@ function Board({ G, ctx, moves, playerID, onExit }: any) {
       </header>
 
       <main className="layout">
-        {/* ================================================================
-            COLUNA ESQUERDA — Mercado + (quando ativo) card de Reforço.
-            O card de Reforço foi movido para cá, abaixo do Mercado.
-            ================================================================ */}
         <aside className="col-left">
           <section>
             <h3>Mercado</h3>
@@ -532,11 +526,6 @@ function Board({ G, ctx, moves, playerID, onExit }: any) {
           )}
         </aside>
 
-        {/* ================================================================
-            COLUNA CENTRAL — Campo de Batalha (agora estende-se até a base,
-            atrás do leque) + card de Modificações (permanece aqui, junto
-            ao confronto que acontece no tabuleiro).
-            ================================================================ */}
         <section className="col-center">
           <section className="bf-section">
             <h3>Campo de Batalha</h3>
@@ -688,7 +677,6 @@ function Board({ G, ctx, moves, playerID, onExit }: any) {
           )}
         </section>
 
-        {/* COLUNA DIREITA — Jogadores */}
         <aside className="col-right">
           <section>
             <h3>Jogadores</h3>
@@ -752,7 +740,6 @@ function Board({ G, ctx, moves, playerID, onExit }: any) {
         </aside>
       </main>
 
-      {/* Mão flutuante */}
       <div className="hand-dock">
         <div className="hand-label">
           <span>Minha mão</span>

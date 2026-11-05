@@ -275,3 +275,45 @@
     animation-delay: 0ms !important;
   }
 }
+
+/* ---------- Rodapé (altura fixa) ---------- */
+
+.mn-footer {
+  flex-shrink: 0;
+  padding: 0.85rem 1.4rem 1rem;
+  border-top: 1px solid rgba(var(--brass-rgb), 0.25);
+  background: rgba(0, 0, 0, 0.15);
+  display: flex;
+  gap: 0.6rem;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.mn-btn {
+  max-width: 240px;
+  margin: 0;
+  padding: 0.65rem 1.4rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  background: var(--grad-cta);
+  color: var(--ink);
+  border-color: var(--brass-bright);
+  text-decoration: none;
+  display: inline-block;
+  text-align: center;
+}
+
+/* Botão "Baixar PDF": visual secundário, para não competir com o "Fechar" */
+.mn-btn-download {
+  background: linear-gradient(180deg, var(--bg-3), var(--bg-2));
+  color: var(--parchment);
+  border: 1px solid var(--border-lit);
+}
+
+.mn-btn-download:hover {
+  background: linear-gradient(180deg, var(--brass), var(--brass-dark));
+  color: var(--ink);
+  border-color: var(--brass-bright);
+  box-shadow: var(--glow-brass);
+}

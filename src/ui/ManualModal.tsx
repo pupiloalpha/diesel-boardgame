@@ -21,6 +21,9 @@ const ASYMMETRIC: { faction: string; unit: string }[] = [
   { faction: 'Império Asiático',        unit: 'Herói'     },
 ];
 
+/** Caminho do PDF do manual em `public/`. Renomeie o arquivo para `manual.pdf`. */
+const MANUAL_PDF_HREF = `${import.meta.env.BASE_URL}manual.pdf`;
+
 export default function ManualModal({ onClose }: Props) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
@@ -196,12 +199,21 @@ export default function ManualModal({ onClose }: Props) {
               <li>Você <strong>só vence</strong> conquistando <strong>TODAS</strong> as Cartas de Objetivo.</li>
               <li>Cada Autômato é alocado aleatoriamente a 1 objetivo no setup e sempre joga nele.</li>
               <li>Na vez do Autômato, ele compra uma carta do Mercado e a anexa <em>revelada</em> ao seu objetivo.</li>
-              <li>Em confrontos, o Autômato sempre aplica a vantagem de facção / objetivo que maximize sua força.</li>
+              <li>Em confrontos, o Autômato sempre aplica a vantagem de facção / objetivo / habilidade conquistada que maximize sua força.</li>
             </ul>
           </section>
         </div>
 
         <footer className="mn-footer">
+          <a
+            className="mn-btn mn-btn-download"
+            href={MANUAL_PDF_HREF}
+            download="manual-diesel.pdf"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Baixar PDF do manual
+          </a>
           <button className="mn-btn" onClick={onClose} autoFocus>Fechar</button>
         </footer>
       </div>
