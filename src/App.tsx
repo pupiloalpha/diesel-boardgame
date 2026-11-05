@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { CSSProperties, MouseEvent, PointerEvent as ReactPointerEvent } from 'react';
+import type { GameOptions, MilitaryType, AutomaDifficulty } from './game/types';
 import { Client } from 'boardgame.io/react';
 import { Local } from 'boardgame.io/multiplayer';
 import {
@@ -177,7 +178,7 @@ function Board({ G, ctx, moves, playerID, onExit }: any) {
     if (!automaActs) return;
     const t = setTimeout(() => {
       if (ctx.phase === 'play') moves.automaTurn();
-      else if (ctx.phase === 'reinforce') moves.passReinforce();
+      else if (ctx.phase === 'reinforce') moves.automaReinforce();
       else if (ctx.phase === 'modify') moves.autoModify();
     }, 700);
     return () => clearTimeout(t);
@@ -775,6 +776,7 @@ function Lobby({ onStart, reveal }: { onStart: (o: GameOptions) => void; reveal:
   const [solo, setSolo] = useState(false);
   const [numPlayers, setNumPlayers] = useState(4);
   const [automas, setAutomas] = useState(1);
+  const [difficulty, setDifficulty] = useState<AutomaDifficulty>('medium');
   const [long, setLong] = useState(false);
   const [asymmetric, setAsymmetric] = useState(false);
 
@@ -796,11 +798,20 @@ function Lobby({ onStart, reveal }: { onStart: (o: GameOptions) => void; reveal:
         </>
       ) : (
         <>
-          <h3>Dificuldade</h3>
+          <h3>Autômatos em jogo</h3>
           <select value={automas} onChange={(e) => setAutomas(Number(e.target.value))}>
-            <option value={1}>Fácil — vencer 1 autômato</option>
-            <option value={2}>Moderado — vencer 2 autômatos</option>
-            <option value={3}>Difícil — vencer 3 autômatos</option>
+            <option value={1}>1 autômato</option>
+            <option value={2}>2 autômatos</option>
+            <option value={3}>3 autômatos</option>
+          </select>
+          <h3>Inteligência do autômato</h3>
+          <select
+            value={difficulty}
+            onChange={(e) => setDifficulty(e.target.value as AutomaDifficulty)}
+          >
+            <option value="easy">Básico — sorteia cartas do Mercado</option>
+            <option value="medium">Otimizado — busca a melhor combinação</option>
+            <option value="hard">Estratégico — também reforça em confrontos</option>
           </select>
           <p className="hint">No modo solo você só vence se conquistar TODOS os objetivos.</p>
         </>
@@ -808,7 +819,13 @@ function Lobby({ onStart, reveal }: { onStart: (o: GameOptions) => void; reveal:
       <h3>Regras opcionais</h3>
       <label><input type="checkbox" checked={long} onChange={(e) => setLong(e.target.checked)} /> Partida longa (usa os 12 objetivos)</label>
       <label><input type="checkbox" checked={asymmetric} onChange={(e) => setAsymmetric(e.target.checked)} /> Facções assimétricas</label>
-      <button onClick={() => onStart({ numPlayers, long, asymmetric, solo, automas })}>Iniciar partida</button>
+      <button
+        onClick={() =>
+          onStart({ numPlayers, long, asymmetric, solo, automas, difficulty })
+        }
+      >
+        Iniciar partida
+      </button>
     </div>
   );
 }

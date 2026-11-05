@@ -1,5 +1,8 @@
 export type MilitaryType = 'terrestre' | 'aereo' | 'maritimo' | 'heroi';
 
+/** Nível de inteligência dos autômatos. */
+export type AutomaDifficulty = 'easy' | 'medium' | 'hard';
+
 export interface MilitaryCard {
   id: string;
   name: string;
@@ -42,6 +45,8 @@ export interface GameOptions {
   asymmetric: boolean;
   solo: boolean;
   automas: number;
+  /** Nível de IA dos autômatos. Padrão: 'medium'. */
+  difficulty?: AutomaDifficulty;
 }
 
 export interface PlayerState {

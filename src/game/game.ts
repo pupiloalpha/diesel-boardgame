@@ -8,7 +8,6 @@ import type {
   GameOptions,
   GameState,
   MilitaryType,
-  ObjectiveEffect,
   PlayerState,
 } from './types';
 import {
@@ -26,12 +25,30 @@ import {
   compareScore,
   scoreAttachments,
 } from './combos';
+import {
+  HAND_SIZE,
+  objectiveEffects,
+  conflictThreshold,
+  isCardForbidden,
+  handSizeFor,
+} from './rules';
+import {
+  pickMarketCardIndex,
+  shouldReinforce,
+} from './automa';
 
-const HAND_SIZE = 3;
+// Re-exporta os helpers (compatibilidade com importadores existentes).
+export {
+  HAND_SIZE,
+  objectiveEffects,
+  conflictThreshold,
+  isCardForbidden,
+  handSizeFor,
+} from './rules';
+
 const BATTLEFIELD_SIZE = 3;
 const MARKET_SIZE = 3;
 const OBJECTIVE_DECK_SIZE = 7;
-const DEFAULT_THRESHOLD = 3;
 
 type Rng = { Shuffle: <T>(deck: T[]) => T[]; Number: () => number };
 type ModMode = 'plus' | 'minus' | 'type';
@@ -72,40 +89,6 @@ function pendingSlot(G: GameState): BattlefieldSlot | undefined {
   return G.battlefield.find((s) => s.objectiveId === G.pendingConfront);
 }
 
-/** Efeitos de campo de batalha de um objetivo. */
-export function objectiveEffects(objectiveId: string): ObjectiveEffect[] {
-  return OBJECTIVE_BY_ID[objectiveId]?.effects ?? [];
-}
-
-/** Limiar de cartas para disparar conflito (3 por padrão; 4 para Cidade Móvel). */
-export function conflictThreshold(objectiveId: string): number {
-  const t = objectiveEffects(objectiveId).find(
-    (e): e is { kind: 'conflictThreshold'; threshold: number } => e.kind === 'conflictThreshold',
-  );
-  return t?.threshold ?? DEFAULT_THRESHOLD;
-}
-
-/** true se a carta é de tipo proibido no objetivo. */
-export function isCardForbidden(cardId: string, objectiveId: string): boolean {
-  const base = MILITARY_BY_ID[cardId];
-  if (!base) return false;
-  return objectiveEffects(objectiveId).some(
-    (e) => e.kind === 'restrictType' && e.type === base.type,
-  );
-}
-
-/** Tamanho máximo da mão do jogador (leva em conta Complexo Industrial). */
-export function handSizeFor(G: GameState, pid: string): number {
-  const won = G.players[pid]?.objectivesWon ?? [];
-  const bonus = won.reduce((sum, objId) => {
-    return sum + objectiveEffects(objId).reduce(
-      (s, e) => s + (e.kind === 'postHandSize' ? e.bonus : 0),
-      0,
-    );
-  }, 0);
-  return HAND_SIZE + bonus;
-}
-
 function currentType(att: Attachment): MilitaryType | null {
   const base = MILITARY_BY_ID[att.cardId];
   if (!base) return null;
@@ -119,7 +102,7 @@ function currentValue(att: Attachment): number | null {
 }
 
 /* ------------------------------------------------------------------ */
-/* Validação (também exportada para a UI usar)                         */
+/* Validação (exportada para a UI)                                     */
 /* ------------------------------------------------------------------ */
 
 export function validateModify(
@@ -135,7 +118,6 @@ export function validateModify(
   const type = currentType(att)!;
   const value = currentValue(att)!;
 
-  // Vantagem de facção assimétrica
   if (G.options.asymmetric) {
     const bonus = FACTION_BY_ID[G.players[pid].factionId].bonusType;
     if (type === bonus) {
@@ -145,7 +127,6 @@ export function validateModify(
     }
   }
 
-  // Efeitos do objetivo
   for (const eff of objectiveEffects(slot.objectiveId)) {
     if (eff.kind === 'valueAdjust' && type === eff.type) {
       if (mode === 'plus' && value < MAX_VALUE) return true;
@@ -157,11 +138,9 @@ export function validateModify(
     }
   }
 
-  // Habilidade pós-aquisição 09: trocar tipo de uma própria
   if (G.players[pid].objectivesWon.includes('obj_09')) {
     if (mode === 'type' && newType && newType !== type) return true;
   }
-
   return false;
 }
 
@@ -176,13 +155,10 @@ export function validateSetValue(
   const type = currentType(att);
   if (!type) return false;
 
-  // Efeito "qualquer valor" do objetivo (ex.: Base da Montanha)
   for (const eff of objectiveEffects(slot.objectiveId)) {
     if (eff.kind === 'anyValue' && type === eff.type) return true;
   }
-  // Habilidade pós-aquisição 08
   if (G.players[pid].objectivesWon.includes('obj_08') && type === 'heroi') return true;
-
   return false;
 }
 
@@ -197,7 +173,6 @@ export function validateSwap(
   if (!G.players[pid].hand.includes(newCardId)) return false;
   const newBase = MILITARY_BY_ID[newCardId];
   if (!newBase) return false;
-  // Nova carta não pode ser de tipo proibido no objetivo
   if (isCardForbidden(newCardId, slot.objectiveId)) return false;
   return true;
 }
@@ -299,12 +274,6 @@ export interface Standing {
   objectives: number;
 }
 
-/**
- * Classificação por Pontos de Vitória (maior primeiro).
- * Empate: vence o jogador mais distante do Primeiro Jogador no sentido horário
- * (único critério de desempate previsto no manual).
- * `pool` restringe a classificação a alguns jogadores (ex.: só autômatos no modo solo).
- */
 export function rankPlayers(
   G: Pick<GameState, 'players' | 'firstPlayer'>,
   pool?: string[],
@@ -320,16 +289,10 @@ export function rankPlayers(
     .sort((a, b) => b.pv - a.pv || distance(b.playerId) - distance(a.playerId));
 }
 
-/** Cartas de Objetivo ainda em disputa (deck + Campo de Batalha). */
 export function remainingObjectives(G: Pick<GameState, 'objectiveDeck' | 'battlefield'>): number {
   return G.objectiveDeck.length + G.battlefield.length;
 }
 
-/**
- * Etapa 4 — SUPREMACIA.
- * Se a última Carta de Objetivo foi conquistada, a partida termina e vence
- * quem tem mais PV. Caso contrário, nada acontece e o turno segue.
- */
 function checkSupremacy(G: GameState) {
   if (remainingObjectives(G) > 0) return;
 
@@ -385,7 +348,6 @@ function resolveConfront(G: GameState, numPlayers: number) {
   if (nextObj) G.battlefield[slotIdx] = { objectiveId: nextObj, attachments: [] };
   else { G.battlefield.splice(slotIdx, 1); fixAutomaSlots(G, slotIdx); }
 
-  // Etapa 4 — Supremacia (logo após a Conquista)
   checkSupremacy(G);
 
   const result: ConfrontResult = {
@@ -398,27 +360,28 @@ function resolveConfront(G: GameState, numPlayers: number) {
 }
 
 /* ------------------------------------------------------------------ */
-/* Automa: encontrar carta válida                                      */
+/* Automa: busca de carta no mercado ou deck                           */
 /* ------------------------------------------------------------------ */
 
-function automaFindCard(G: GameState, objectiveId: string, random: Rng): string | undefined {
-  // 1) Tentar mercado (carta válida)
-  const validIdxs: number[] = [];
-  for (let i = 0; i < G.market.length; i++) {
-    if (!isCardForbidden(G.market[i], objectiveId)) validIdxs.push(i);
-  }
-  if (validIdxs.length > 0) {
-    const pick = validIdxs[Math.floor(random.Number() * validIdxs.length)];
-    const [card] = G.market.splice(pick, 1);
+function automaFindCard(
+  G: GameState,
+  pid: string,
+  slot: BattlefieldSlot,
+  random: Rng,
+): string | undefined {
+  // 1) Mercado — decisão delegada ao módulo de IA (varia por dificuldade).
+  const idx = pickMarketCardIndex(G, pid, slot, random);
+  if (idx !== undefined) {
+    const [card] = G.market.splice(idx, 1);
     const next = drawFromDeck(G, random);
     if (next) G.market.push(next);
     return card;
   }
-  // 2) Tentar deck (descartando proibidas)
+  // 2) Fallback: deck (descarta as proibidas).
   for (let attempt = 0; attempt < 30; attempt++) {
     const c = drawFromDeck(G, random);
     if (!c) return undefined;
-    if (!isCardForbidden(c, objectiveId)) return c;
+    if (!isCardForbidden(c, slot.objectiveId)) return c;
     G.militaryDiscard.push(c);
   }
   return undefined;
@@ -538,7 +501,7 @@ export function createDiesel(options: GameOptions): Game<GameState> {
               const mine = slot.attachments.filter((a) => a.playerId === pid).length;
               if (mine >= threshold) { events.endTurn(); return; }
 
-              const card = automaFindCard(G, slot.objectiveId, random);
+              const card = automaFindCard(G, pid, slot, random);
               if (!card) { events.endTurn(); return; }
 
               slot.attachments.push({
@@ -610,6 +573,41 @@ export function createDiesel(options: GameOptions): Game<GameState> {
               if (!G.pendingConfront) return INVALID_MOVE;
               if (pid === G.confrontTriggeredBy) return INVALID_MOVE;
               if (G.reinforcePassed.includes(pid)) return INVALID_MOVE;
+              G.reinforcePassed.push(pid);
+            },
+          },
+
+          /**
+           * Move específico do autômato para a fase de Reforços.
+           * Decide reforçar (puxando direto do Mercado) ou passar, com
+           * base em `shouldReinforce` (varia conforme a dificuldade).
+           */
+          automaReinforce: {
+            client: false,
+            move: ({ G, ctx, random }) => {
+              const pid = ctx.currentPlayer;
+              const me = G.players[pid];
+              if (!me?.isAutoma) return INVALID_MOVE;
+              if (!G.pendingConfront) return INVALID_MOVE;
+              if (pid === G.confrontTriggeredBy) return INVALID_MOVE;
+              if (G.reinforcePassed.includes(pid)) return INVALID_MOVE;
+
+              const slot = pendingSlot(G);
+              if (!slot) return INVALID_MOVE;
+
+              const idx = shouldReinforce(G, pid, slot);
+              if (idx === undefined) {
+                G.reinforcePassed.push(pid);
+                return;
+              }
+
+              const [cardId] = G.market.splice(idx, 1);
+              const next = drawFromDeck(G, random);
+              if (next) G.market.push(next);
+
+              slot.attachments.push({
+                playerId: pid, cardId, revealed: false, valueMod: 0, typeOverride: null,
+              });
               G.reinforcePassed.push(pid);
             },
           },
@@ -741,7 +739,6 @@ export function createDiesel(options: GameOptions): Game<GameState> {
               let bestAction: BestAction | null = null;
 
               for (const att of mine) {
-                // +/- valor
                 for (const mode of ['plus', 'minus'] as const) {
                   if (!validateModify(G, pid, att, slot, mode)) continue;
                   const trial = mine.map((a) => ({ ...a }));
@@ -753,7 +750,6 @@ export function createDiesel(options: GameOptions): Game<GameState> {
                     bestAction = { kind: 'modify', att, mod: { mode } };
                   }
                 }
-                // troca de tipo
                 for (const nt of MILITARY_TYPES) {
                   if (!validateModify(G, pid, att, slot, 'type', nt)) continue;
                   const trial = mine.map((a) => ({ ...a }));
@@ -765,7 +761,6 @@ export function createDiesel(options: GameOptions): Game<GameState> {
                     bestAction = { kind: 'modify', att, mod: { mode: 'type', newType: nt } };
                   }
                 }
-                // qualquer valor
                 for (let v = MIN_VALUE; v <= MAX_VALUE; v++) {
                   if (!validateSetValue(G, pid, att, slot, v)) continue;
                   const trial = mine.map((a) => ({ ...a }));
@@ -777,7 +772,6 @@ export function createDiesel(options: GameOptions): Game<GameState> {
                     bestAction = { kind: 'setValue', att, value: v };
                   }
                 }
-                // troca por carta da mão (obj_10 — Controlador Temporal)
                 if (me.objectivesWon.includes('obj_10')) {
                   for (const newCardId of me.hand) {
                     if (!validateSwap(G, pid, att, slot, newCardId)) continue;
