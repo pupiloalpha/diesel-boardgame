@@ -31,6 +31,7 @@ import VictoryModal from './ui/VictoryModal';
 import SplashScreen from './ui/SplashScreen';
 import DominioPanel from './ui/DominioPanel';
 import SupremaciaModal from './ui/SupremaciaModal';
+import ManualModal from './ui/ManualModal';
 import {
   BF_ZOOM_MAX,
   BF_ZOOM_MIN,
@@ -47,6 +48,7 @@ import './App.css';
 import './ui/animations.css';
 import './ui/table.css';
 import './ui/dominio.css';
+import './ui/manual.css';
 
 const PHASE_LABEL: Record<string, string> = {
   play: 'Jogada',
@@ -150,8 +152,9 @@ function Board({ G, ctx, moves, playerID, onExit }: any) {
   const [endSeen, setEndSeen] = useState(false);
   /* Domínio exibido no painel (null = o meu). */
   const [inspectPid, setInspectPid] = useState<string | null>(null);
+  const [manualOpen, setManualOpen] = useState(false);
 
-  const overlayOpen = introOpen || confrontIntro || supremacyOpen;
+  const overlayOpen = introOpen || confrontIntro || supremacyOpen || manualOpen;;
   const uiBlocked = useUiBlocked();
   const automaActs = isMyTurn && iAmAutoma && !G.gameOver && !uiBlocked;
 
@@ -463,6 +466,7 @@ function Board({ G, ctx, moves, playerID, onExit }: any) {
           onContinue={() => setSupremacyOpen(false)}
         />
       )}
+      {manualOpen && <ManualModal onClose={() => setManualOpen(false)} />}   {/* ← NOVO */}
 
       <header className="topbar">
         <div className="topbar-row">
@@ -477,7 +481,10 @@ function Board({ G, ctx, moves, playerID, onExit }: any) {
             </div>
             {activeRules.length > 0 && <div className="rules-tag">{activeRules.join(' · ')}</div>}
           </div>
-          <div className="topbar-actions"><button onClick={onExit}>Voltar ao Menu</button></div>
+          <div className="topbar-actions">
+            <button onClick={() => setManualOpen(true)}>Manual</button>
+            <button onClick={onExit}>Voltar ao Menu</button>
+          </div>
         </div>
         <StepIndicator G={G} ctx={ctx} supremacy={supremacyOpen} />
       </header>

@@ -184,58 +184,66 @@ export default function SetupIntro({ G, onDone }: Props) {
         </div>
 
         <div className="su-table">
-          {/* Objetivos */}
-          <div className={`su-row ${active === 'obj' ? 'active' : ''}`}>
-            <div className="su-row-head">Objetivos</div>
-            <div className="su-cells">
-              <Cell shown={stage >= 1} dy={-40} label="Deck">
-                <Pile src={CARD_BACKS.objectives} count={objInDeck} />
-              </Cell>
-              {slots.map((slot, i) => {
-                const obj = OBJECTIVE_BY_ID[slot.objectiveId];
-                const tags = Object.entries(G.automaSlot)
-                  .filter(([, idx]) => idx === i)
-                  .map(([pid]) => `A${pid}`);
-                return (
-                  <Cell
-                    key={slot.objectiveId}
-                    shown={stage >= 2}
-                    k={i + 1}
-                    i={i}
-                    label={
-                      <>
-                        {obj.name}
-                        {stage >= 6 &&
-                          tags.map((t) => (
-                            <span key={t} className="su-tag">{t}</span>
-                          ))}
-                      </>
-                    }
-                  >
-                    <img className="su-img" src={obj.image} alt={obj.name} draggable={false} />
-                  </Cell>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Cartas militares */}
-          <div className={`su-row ${active === 'mil' ? 'active' : ''}`}>
-            <div className="su-row-head">Cartas Militares</div>
-            <div className="su-cells">
-              <Cell shown={stage >= 3} dy={-40} label="Deck">
-                <Pile src={CARD_BACKS.military} count={milInDeck} />
-              </Cell>
-              <Cell shown={false} label="Descarte" className={stage >= 3 ? '' : 'su-dim'} />
-              {G.market.map((id, i) => (
-                <Cell key={`${id}-${i}`} shown={stage >= 4} k={i + 2} i={i} label={i === 0 ? 'Mercado' : ''}>
-                  <img className="su-img" src={CARD_BACKS.military} alt="Carta do Mercado" draggable={false} />
+          {/* ================================================================
+              Objetivos + Cartas Militares, lado a lado no desktop.
+              ================================================================ */}
+          <div className="su-mid">
+            {/* Objetivos */}
+            <div className={`su-row ${active === 'obj' ? 'active' : ''}`}>
+              <div className="su-row-head">Objetivos</div>
+              <div className="su-cells">
+                <Cell shown={stage >= 1} dy={-40} label="Deck">
+                  <Pile src={CARD_BACKS.objectives} count={objInDeck} />
                 </Cell>
-              ))}
+                {slots.map((slot, i) => {
+                  const obj = OBJECTIVE_BY_ID[slot.objectiveId];
+                  const tags = Object.entries(G.automaSlot)
+                    .filter(([, idx]) => idx === i)
+                    .map(([pid]) => `A${pid}`);
+                  return (
+                    <Cell
+                      key={slot.objectiveId}
+                      shown={stage >= 2}
+                      k={i + 1}
+                      i={i}
+                      label={
+                        <>
+                          {obj.name}
+                          {stage >= 6 &&
+                            tags.map((t) => (
+                              <span key={t} className="su-tag">{t}</span>
+                            ))}
+                        </>
+                      }
+                    >
+                      <img className="su-img" src={obj.image} alt={obj.name} draggable={false} />
+                    </Cell>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Cartas Militares */}
+            <div className={`su-row ${active === 'mil' ? 'active' : ''}`}>
+              <div className="su-row-head">Cartas Militares</div>
+              <div className="su-cells">
+                <Cell shown={stage >= 3} dy={-40} label="Deck">
+                  <Pile src={CARD_BACKS.military} count={milInDeck} />
+                </Cell>
+                <Cell shown={false} label="Descarte" className={stage >= 3 ? '' : 'su-dim'} />
+                {G.market.map((id, i) => (
+                  <Cell key={`${id}-${i}`} shown={stage >= 4} k={i + 2} i={i} label={i === 0 ? 'Mercado' : ''}>
+                    <img className="su-img" src={CARD_BACKS.military} alt="Carta do Mercado" draggable={false} />
+                  </Cell>
+                ))}
+              </div>
             </div>
           </div>
 
-          {/* Jogadores */}
+          {/* ================================================================
+              Jogadores — grid 2×2; info (nome / facção / bônus) ACIMA
+              das cartas de facção + mão.
+              ================================================================ */}
           <div className={`su-row ${active === 'pl' ? 'active' : ''}`}>
             <div className="su-row-head">Jogadores</div>
             <div className="su-players">
@@ -243,22 +251,25 @@ export default function SetupIntro({ G, onDone }: Props) {
                 const faction = FACTION_BY_ID[G.players[pid].factionId];
                 return (
                   <div className="su-player" key={pid}>
-                    <Cell shown={stage >= 6} i={pi} dy={30}>
-                      <img className="su-img" src={faction.image} alt={faction.name} draggable={false} />
-                    </Cell>
-                    <div className="su-hand">
-                      {Array.from({ length: HAND_SIZE }, (_, h) => (
-                        <Cell key={h} shown={stage >= 5} i={pi * HAND_SIZE + h} dy={-220}>
-                          <img className="su-img" src={CARD_BACKS.military} alt="Carta da mão" draggable={false} />
-                        </Cell>
-                      ))}
-                    </div>
                     <div className="su-player-info">
                       <strong>{playerName(G, pid)}</strong>
                       <span>{stage >= 6 ? faction.name : '—'}</span>
                       {G.options.asymmetric && stage >= 6 && (
                         <em>Bônus: {TYPE_LABEL[faction.bonusType]}</em>
                       )}
+                    </div>
+
+                    <div className="su-player-cards">
+                      <Cell shown={stage >= 6} i={pi} dy={30}>
+                        <img className="su-img" src={faction.image} alt={faction.name} draggable={false} />
+                      </Cell>
+                      <div className="su-hand">
+                        {Array.from({ length: HAND_SIZE }, (_, h) => (
+                          <Cell key={h} shown={stage >= 5} i={pi * HAND_SIZE + h} dy={-220}>
+                            <img className="su-img" src={CARD_BACKS.military} alt="Carta da mão" draggable={false} />
+                          </Cell>
+                        ))}
+                      </div>
                     </div>
                   </div>
                 );

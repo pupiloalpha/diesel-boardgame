@@ -32,7 +32,8 @@
 }
 
 .su-panel {
-  width: min(980px, 100%);
+  /* Painel alargado para caber as duas seções de cartas lado a lado. */
+  width: min(1180px, 100%);
   margin: auto; /* centraliza sem cortar o topo quando a tela é baixa */
   display: grid;
   gap: 0.75rem;
@@ -102,6 +103,15 @@
 }
 
 .su-table { display: grid; gap: 0.6rem; }
+
+/* ---------- Linha do meio: Objetivos | Cartas Militares ---------- */
+
+.su-mid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.6rem;
+  align-items: start;
+}
 
 .su-row {
   padding: 0.5rem 0.75rem 0.65rem;
@@ -211,25 +221,25 @@
   animation: captionIn 0.4s ease both;
 }
 
+/* ---------- Jogadores: grid 2×2 com info acima ---------- */
+
 .su-players {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(270px, 1fr));
-  gap: 0.5rem;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.6rem;
 }
 
 .su-player {
   display: flex;
-  align-items: center;
-  gap: 0.55rem;
-  padding: 0.4rem 0.5rem;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.55rem 0.7rem;
   border-radius: var(--radius-sm);
   background: rgba(0, 0, 0, 0.25);
+  border: 1px solid var(--border);
 }
 
-.su-player .su-item,
-.su-player .su-cell { width: calc(var(--cw) * 0.8); }
-.su-hand { display: flex; gap: 4px; }
-
+/* Info (nome, facção, bônus) em cima, ocupando a largura toda */
 .su-player-info {
   display: flex;
   flex-direction: column;
@@ -241,6 +251,24 @@
 
 .su-player-info strong { color: var(--parchment); font-size: var(--fs-sm); }
 .su-player-info em { color: var(--amber); font-style: normal; }
+
+/* Linha de cartas: 1 facção + 3 da mão */
+.su-player-cards {
+  display: flex;
+  gap: 8px;               /* separa a facção do conjunto de cartas da mão */
+  align-items: flex-start;
+  width: 100%;
+}
+
+.su-player-cards > .su-item,
+.su-player-cards .su-hand > .su-item {
+  width: var(--cw);
+}
+
+.su-hand {
+  display: flex;
+  gap: 4px;               /* mais próximas entre si, formando um grupo */
+}
 
 .su-actions { display: flex; justify-content: center; }
 
@@ -264,6 +292,16 @@
 @keyframes pulseBtn {
   0%, 100% { box-shadow: 0 0 0 rgba(var(--brass-bright-rgb), 0); }
   50% { box-shadow: var(--glow-brass); }
+}
+
+/* ---------- Responsivo ---------- */
+
+@media (max-width: 900px) {
+  .su-mid { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 600px) {
+  .su-players { grid-template-columns: 1fr; }
 }
 
 /* =========================================================
