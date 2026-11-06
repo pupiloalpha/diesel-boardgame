@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { CSSProperties } from 'react';
 import type { GameState } from '../game/types';
-import { CARD_BACKS, FACTION_BY_ID, OBJECTIVE_BY_ID } from '../game/data';
+import { CARD_BACKS, FACTION_BY_ID } from '../game/data';
 import { rankPlayers } from '../game/game';
 import { playerName } from './shared';
 

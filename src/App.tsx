@@ -875,30 +875,47 @@ function Board({ G, ctx, moves, playerID, onExit }: any) {
           </div>
         </main>
 
-        {/* Mão sempre visível */}
+                {/* Mão em leque (sempre visível) */}
         <section className="mob-hand">
           <div className="mob-hand-label">Minha mão ({me.hand.length})</div>
-          <div className="mob-hand-row">
-            {me.hand.length === 0 && (
-              <p className="mob-hint" style={{ margin: 0 }}>Sem cartas na mão.</p>
-            )}
-            {me.hand.map((id: string) => {
-              const isSelected = selected === id;
-              return (
-                <div
-                  key={id}
-                  className={`mob-hand-card ${isSelected ? 'selected' : ''}`}
-                  onClick={
-                    canAdvance
-                      ? () => setSelected(isSelected ? null : id)
-                      : undefined
-                  }
-                >
-                  <img src={MILITARY_BY_ID[id].image} alt={MILITARY_BY_ID[id].name} draggable={false} />
-                </div>
-              );
-            })}
-          </div>
+          {me.hand.length === 0 ? (
+            <p className="mob-hint" style={{ margin: 0, textAlign: 'center' }}>
+              Sem cartas na mão.
+            </p>
+          ) : (
+            <div className="mob-hand-fan">
+              {me.hand.map((id: string, i: number) => {
+                const off = i - (me.hand.length - 1) / 2;
+                const isSelected = selected === id;
+                return (
+                  <div
+                    key={id}
+                    className={`mob-hand-slot ${isSelected ? 'selected' : ''}`}
+                    style={
+                      {
+                        '--mob-rot': `${off * 5}deg`,
+                        '--mob-lift': `${Math.abs(off) * 6}px`,
+                        zIndex: i + 1,
+                      } as CSSProperties
+                    }
+                    onClick={
+                      canAdvance
+                        ? () => setSelected(isSelected ? null : id)
+                        : undefined
+                    }
+                  >
+                    <div className="mob-hand-card">
+                      <img
+                        src={MILITARY_BY_ID[id].image}
+                        alt={MILITARY_BY_ID[id].name}
+                        draggable={false}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </section>
 
         {/* Barra de ações contextual */}
