@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { CSSProperties, MouseEvent, PointerEvent as ReactPointerEvent } from 'react';
+import type { GameOptions, MilitaryType, AutomaDifficulty } from './game/types';
 import { Client } from 'boardgame.io/react';
 import { Local } from 'boardgame.io/multiplayer';
 import {
@@ -25,7 +26,6 @@ import {
   MILITARY_TYPES,
   TYPE_LABEL,
 } from './game/combos';
-import type { GameOptions, MilitaryType, AutomaDifficulty } from './game/types';
 import SetupIntro from './ui/SetupIntro';
 import ConfrontIntro from './ui/ConfrontIntro';
 import VictoryModal from './ui/VictoryModal';
@@ -45,11 +45,13 @@ import {
 } from './ui/shared';
 import { boxOf, flyCard } from './ui/flight';
 import type { Box } from './ui/flight';
+import { useIsMobile } from './ui/useIsMobile';
 import './App.css';
 import './ui/animations.css';
 import './ui/table.css';
 import './ui/dominio.css';
 import './ui/manual.css';
+import './ui/mobile.css';
 
 const PHASE_LABEL: Record<string, string> = {
   play: 'Jogada',
@@ -108,6 +110,300 @@ function StepIndicator({ G, ctx, supremacy }: any) {
   );
 }
 
+/* ================================================================== */
+/* Componentes dos modais mobile (recebem apenas o que precisam)      */
+/* ================================================================== */
+
+function MobileMarketModal({
+  G, moves, onClose,
+}: {
+  G: any;
+  moves: any;
+  onClose: () => void;
+}) {
+  const nothingToDraw =
+    G.market.length === 0 &&
+    G.militaryDeck.length === 0 &&
+    G.militaryDiscard.length === 0;
+
+  return (
+    <div className="mob-modal-overlay" onClick={onClose}>
+      <div className="mob-modal" onClick={(e) => e.stopPropagation()}>
+        <header className="mob-modal-header">
+          <h3>Mercado</h3>
+          <button className="mob-close" onClick={onClose} aria-label="Fechar">✕</button>
+        </header>
+        <p className="mob-hint">
+          Toque numa carta do Mercado para recrutá-la — ela é reposta imediatamente.
+        </p>
+        <div className="mob-market-grid">
+          {G.market.map((id: string, i: number) => {
+            const c = MILITARY_BY_ID[id];
+            return (
+              <button
+                key={`${id}-${i}`}
+                className="mob-market-card"
+                onClick={() => { moves.recruit('market', i); onClose(); }}
+              >
+                <img src={c.image} alt={c.name} draggable={false} />
+                <span className="mob-market-label">{c.name}</span>
+              </button>
+            );
+          })}
+        </div>
+        {nothingToDraw && (
+          <p className="mob-hint" style={{ color: 'var(--amber)' }}>
+            Não há mais cartas para comprar. Você pode pular o recrutamento.
+          </p>
+        )}
+        <button
+          className="mob-btn mob-btn-primary"
+          onClick={() => { moves.recruit('deck'); onClose(); }}
+        >
+          {nothingToDraw ? 'Pular recrutamento' : 'Comprar do topo do deck'}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function MobileReinforceModal({
+  G, moves, playerID, onClose,
+}: {
+  G: any;
+  moves: any;
+  playerID: string;
+  onClose: () => void;
+}) {
+  const [picked, setPicked] = useState<string | null>(null);
+  const me = G.players[playerID];
+  const contested = G.pendingConfront ? OBJECTIVE_BY_ID[G.pendingConfront] : null;
+
+  return (
+    <div className="mob-modal-overlay" onClick={onClose}>
+      <div className="mob-modal" onClick={(e) => e.stopPropagation()}>
+        <header className="mob-modal-header">
+          <h3>Reforço</h3>
+          <button className="mob-close" onClick={onClose} aria-label="Fechar">✕</button>
+        </header>
+        {contested && (
+          <p className="mob-hint">
+            Confronto em: <strong>{contested.name}</strong>
+          </p>
+        )}
+        <p className="mob-hint">Toque numa carta da mão para escolhê-la:</p>
+        <div className="mob-hand-picker">
+          {me.hand.map((id: string) => (
+            <div
+              key={id}
+              className={`mob-pick-card ${picked === id ? 'picked' : ''}`}
+              onClick={() => setPicked(picked === id ? null : id)}
+            >
+              <img src={MILITARY_BY_ID[id].image} alt={MILITARY_BY_ID[id].name} draggable={false} />
+            </div>
+          ))}
+        </div>
+        <button
+          className="mob-btn mob-btn-primary"
+          disabled={!picked}
+          onClick={() => {
+            if (picked) { moves.reinforceCard(picked); onClose(); }
+          }}
+        >
+          {picked ? `Reforçar com ${MILITARY_BY_ID[picked].name}` : 'Escolha uma carta'}
+        </button>
+        <button
+          className="mob-btn mob-btn-ghost"
+          style={{ marginTop: 8 }}
+          onClick={() => { moves.passReinforce(); onClose(); }}
+        >
+          Passar (não reforçar)
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function MobileModifyModal({
+  G, moves, playerID, slot, onClose,
+}: {
+  G: any;
+  moves: any;
+  playerID: string;
+  slot: any;
+  onClose: () => void;
+}) {
+  const me = G.players[playerID];
+  const myAtts: { att: any; idx: number }[] = slot.attachments
+    .map((att: any, idx: number) => ({ att, idx }))
+    .filter(({ att }: any) => att.playerId === playerID);
+
+  const allValues = Array.from(
+    { length: MAX_VALUE - MIN_VALUE + 1 },
+    (_, i) => MIN_VALUE + i,
+  );
+
+  return (
+    <div className="mob-modal-overlay" onClick={onClose}>
+      <div className="mob-modal" onClick={(e) => e.stopPropagation()}>
+        <header className="mob-modal-header">
+          <h3>Modificações</h3>
+          <button className="mob-close" onClick={onClose} aria-label="Fechar">✕</button>
+        </header>
+        <p className="mob-hint">
+          Escolha <strong>uma</strong> ação para uma das suas cartas:
+        </p>
+
+        {myAtts.map(({ att, idx }) => {
+          const base = MILITARY_BY_ID[att.cardId];
+          const curType: MilitaryType = att.typeOverride ?? base.type;
+          const curValue = base.value + att.valueMod;
+
+          const canPlus = validateModify(G, playerID, att, slot, 'plus');
+          const canMinus = validateModify(G, playerID, att, slot, 'minus');
+          const typeTargets = MILITARY_TYPES.filter(
+            (t) => t !== curType && validateModify(G, playerID, att, slot, 'type', t),
+          );
+          const valueTargets = allValues.filter(
+            (v) => v !== curValue && validateSetValue(G, playerID, att, slot, v),
+          );
+          const canSwap = me.hand.length > 0 && me.objectivesWon.includes('obj_10');
+          const handOptions = canSwap
+            ? me.hand.filter((id: string) => validateSwap(G, playerID, att, slot, id))
+            : [];
+
+          if (
+            !canPlus && !canMinus &&
+            typeTargets.length === 0 &&
+            valueTargets.length === 0 &&
+            handOptions.length === 0
+          ) return null;
+
+          return (
+            <div className="mob-mod-card" key={idx}>
+              <img src={base.image} alt={base.name} draggable={false} />
+              <div className="mob-mod-options">
+                {canPlus && (
+                  <button onClick={() => { moves.modifyCard(idx, 'plus'); onClose(); }}>
+                    +1
+                  </button>
+                )}
+                {canMinus && (
+                  <button onClick={() => { moves.modifyCard(idx, 'minus'); onClose(); }}>
+                    −1
+                  </button>
+                )}
+                {typeTargets.map((t) => (
+                  <button
+                    key={t}
+                    onClick={() => { moves.modifyCard(idx, 'type', t); onClose(); }}
+                  >
+                    → {TYPE_LABEL[t]}
+                  </button>
+                ))}
+                {valueTargets.length > 0 && (
+                  <select
+                    value=""
+                    onChange={(e) => {
+                      const v = Number(e.target.value);
+                      if (v) { moves.setCardValue(idx, v); onClose(); }
+                    }}
+                  >
+                    <option value="">= Valor…</option>
+                    {valueTargets.map((v) => (
+                      <option key={v} value={v}>{v}</option>
+                    ))}
+                  </select>
+                )}
+                {handOptions.length > 0 && (
+                  <select
+                    value=""
+                    onChange={(e) => {
+                      const id = e.target.value;
+                      if (id) { moves.swapWithHand(idx, id); onClose(); }
+                    }}
+                  >
+                    <option value="">↻ Trocar por…</option>
+                    {handOptions.map((id: string) => (
+                      <option key={id} value={id}>{MILITARY_BY_ID[id].name}</option>
+                    ))}
+                  </select>
+                )}
+              </div>
+            </div>
+          );
+        })}
+
+        <button
+          className="mob-btn mob-btn-ghost"
+          style={{ marginTop: 8 }}
+          onClick={() => { moves.passModify(); onClose(); }}
+        >
+          Não modificar
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function MobilePlayersModal({
+  G, playerID, onClose,
+}: {
+  G: any;
+  playerID: string;
+  onClose: () => void;
+}) {
+  const [inspectPid, setInspectPid] = useState(playerID);
+
+  return (
+    <div className="mob-modal-overlay" onClick={onClose}>
+      <div className="mob-modal" onClick={(e) => e.stopPropagation()}>
+        <header className="mob-modal-header">
+          <h3>Jogadores</h3>
+          <button className="mob-close" onClick={onClose} aria-label="Fechar">✕</button>
+        </header>
+
+        <ul className="mob-players-list">
+          {Object.entries(G.players).map(([pid, p]: any) => {
+            const f = FACTION_BY_ID[p.factionId];
+            return (
+              <li
+                key={pid}
+                className={pid === inspectPid ? 'active' : ''}
+                onClick={() => setInspectPid(pid)}
+              >
+                <img src={f.image} alt={f.name} draggable={false} />
+                <div className="info">
+                  <strong>{playerName(G, pid)}{pid === playerID ? ' (você)' : ''}</strong>
+                  <small>{f.name}</small>
+                  <small>{totalPV(G, pid)} PV · {p.objectivesWon.length} objetivo(s)</small>
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+
+        <DominioPanel G={G} pid={inspectPid} mine={inspectPid === playerID} />
+
+        {G.lastConfront && (
+          <div className="mob-confront-info">
+            <strong>Último confronto:</strong> {playerName(G, G.lastConfront.winnerId)} venceu{' '}
+            {OBJECTIVE_BY_ID[G.lastConfront.objectiveId]?.name}.
+          </div>
+        )}
+
+        <button
+          className="mob-btn mob-btn-primary"
+          style={{ marginTop: 8 }}
+          onClick={onClose}
+        >
+          Fechar
+        </button>
+      </div>
+    </div>
+  );
+}
+
 /* ------------------------------------------------------------------ */
 /* Tabuleiro                                                           */
 /* ------------------------------------------------------------------ */
@@ -123,12 +419,7 @@ function Board({ G, ctx, moves, playerID, onExit }: any) {
   /* --- Refs do PAN do campo de batalha --- */
   const bfScrollRef = useRef<HTMLDivElement>(null);
   const panRef = useRef({
-    active: false,
-    startX: 0,
-    startY: 0,
-    scrollLeft: 0,
-    scrollTop: 0,
-    moved: false,
+    active: false, startX: 0, startY: 0, scrollLeft: 0, scrollTop: 0, moved: false,
   });
   const [isPanning, setIsPanning] = useState(false);
   const suppressClickRef = useRef(false);
@@ -143,19 +434,26 @@ function Board({ G, ctx, moves, playerID, onExit }: any) {
 
   const isViewer = solo ? playerID === '0' : isMyTurn;
 
+  /* --- Mobile --- */
+  const isMobile = useIsMobile();
+  const [mobileMarketOpen, setMobileMarketOpen] = useState(false);
+  const [mobileReinforceOpen, setMobileReinforceOpen] = useState(false);
+  const [mobileModifyOpen, setMobileModifyOpen] = useState(false);
+  const [mobilePlayersOpen, setMobilePlayersOpen] = useState(false);
+
   const [introOpen, setIntroOpen] = useState(
     () => playerID === '0' && ctx.turn <= 1 && ctx.phase === 'play' && !G.gameOver,
   );
   const [confrontIntro, setConfrontIntro] = useState(false);
-  /* Etapa 4 (Supremacia): aberta após cada Conquista; no fim da partida
-     antecede a tela de vitória. */
   const [supremacyOpen, setSupremacyOpen] = useState(false);
   const [endSeen, setEndSeen] = useState(false);
-  /* Domínio exibido no painel (null = o meu). */
   const [inspectPid, setInspectPid] = useState<string | null>(null);
   const [manualOpen, setManualOpen] = useState(false);
 
-  const overlayOpen = introOpen || confrontIntro || supremacyOpen || manualOpen;
+  const overlayOpen =
+    introOpen || confrontIntro || supremacyOpen || manualOpen ||
+    mobileMarketOpen || mobileReinforceOpen || mobileModifyOpen || mobilePlayersOpen;
+
   const uiBlocked = useUiBlocked();
   const automaActs = isMyTurn && iAmAutoma && !G.gameOver && !uiBlocked;
 
@@ -173,6 +471,13 @@ function Board({ G, ctx, moves, playerID, onExit }: any) {
     return () => setUiBlocked(false);
   }, [overlayOpen]);
 
+  /* Fecha modais mobile ao mudar de fase/jogador ou perder a ação */
+  useEffect(() => {
+    if (ctx.phase !== 'reinforce') setMobileReinforceOpen(false);
+    if (ctx.phase !== 'modify') setMobileModifyOpen(false);
+    if (!G.hasAdvanced) setMobileMarketOpen(false);
+  }, [ctx.phase, G.hasAdvanced]);
+
   useEffect(() => {
     if (!automaActs) return;
     const t = setTimeout(() => {
@@ -184,7 +489,6 @@ function Board({ G, ctx, moves, playerID, onExit }: any) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [automaActs, ctx.phase, ctx.turn]);
 
-  /* Animação de reposição do Mercado (autômatos) */
   useEffect(() => {
     const prev = prevMarketRef.current;
     prevMarketRef.current = G.market;
@@ -201,6 +505,7 @@ function Board({ G, ctx, moves, playerID, onExit }: any) {
     if (G.market.length < prev.length) return;
     if (!solo) return;
     if (!isViewer) return;
+    if (isMobile) return; // mobile não usa animação de voo
 
     const deckImg = document.querySelector('[data-deck] img') as HTMLElement | null;
     const marketImgs = document.querySelectorAll('.market .card-img');
@@ -215,7 +520,7 @@ function Board({ G, ctx, moves, playerID, onExit }: any) {
       duration: 550,
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [G.market, isViewer, solo]);
+  }, [G.market, isViewer, solo, isMobile]);
 
   useEffect(() => {
     const prev = prevPhaseRef.current;
@@ -227,7 +532,7 @@ function Board({ G, ctx, moves, playerID, onExit }: any) {
     if (ctx.phase === 'reinforce') setConfrontIntro(true);
     else if (ctx.phase === 'modify') showBanner('Modificações', 'Facção / Objetivo', 'phase');
     else if (ctx.phase === 'play' && (prev === 'reinforce' || prev === 'modify') && G.lastConfront) {
-      setSupremacyOpen(true); // Etapa 4 — Supremacia
+      setSupremacyOpen(true);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ctx.phase, isViewer]);
@@ -243,12 +548,8 @@ function Board({ G, ctx, moves, playerID, onExit }: any) {
     const el = bfScrollRef.current;
     if (!el) return;
     panRef.current = {
-      active: true,
-      startX: e.clientX,
-      startY: e.clientY,
-      scrollLeft: el.scrollLeft,
-      scrollTop: el.scrollTop,
-      moved: false,
+      active: true, startX: e.clientX, startY: e.clientY,
+      scrollLeft: el.scrollLeft, scrollTop: el.scrollTop, moved: false,
     };
   };
 
@@ -323,7 +624,9 @@ function Board({ G, ctx, moves, playerID, onExit }: any) {
     !G.modifyDone.includes(playerID);
 
   const contested = G.pendingConfront ? OBJECTIVE_BY_ID[G.pendingConfront] : null;
-  const confrontSlot = G.pendingConfront ? G.battlefield.find((s: any) => s.objectiveId === G.pendingConfront) : null;
+  const confrontSlot = G.pendingConfront
+    ? G.battlefield.find((s: any) => s.objectiveId === G.pendingConfront)
+    : null;
 
   const myModifiable: { att: any; idx: number }[] =
     canModify && confrontSlot
@@ -363,12 +666,8 @@ function Board({ G, ctx, moves, playerID, onExit }: any) {
   };
 
   const runFlight = async (opts: {
-    fromEl: Element | null;
-    src: string;
-    to: Box | null;
-    commit: () => void;
-    swapTo?: string;
-    refillFrom?: Element | null;
+    fromEl: Element | null; src: string; to: Box | null; commit: () => void;
+    swapTo?: string; refillFrom?: Element | null;
   }) => {
     if (busyRef.current) return;
     busyRef.current = true;
@@ -447,8 +746,256 @@ function Board({ G, ctx, moves, playerID, onExit }: any) {
     ? `${G.lastConfront.objectiveId}-${G.lastConfront.winnerId}-${G.lastConfront.participants.length}`
     : 'none';
 
-  const allValues = Array.from({ length: MAX_VALUE - MIN_VALUE + 1 }, (_, i) => MIN_VALUE + i);
+  const allValues = Array.from(
+    { length: MAX_VALUE - MIN_VALUE + 1 },
+    (_, i) => MIN_VALUE + i,
+  );
 
+  /* ================================================================ */
+  /* MOBILE — render alternativo (mesma lógica, layout simplificado)  */
+  /* ================================================================ */
+  const renderMobile = () => {
+    // Hint contextual no rodapé
+    let actionHint: React.ReactNode = null;
+    if (canAdvance) {
+      if (selected) {
+        const hasValidSlot = G.battlefield.some((slot: any) => {
+          const myCount = slot.attachments.filter((a: any) => a.playerId === playerID).length;
+          return !isCardForbidden(selected, slot.objectiveId)
+            && myCount < conflictThreshold(slot.objectiveId);
+        });
+        actionHint = hasValidSlot
+          ? <>Agora toque num <strong>objetivo</strong> para jogar a carta.</>
+          : <>Esta carta não pode ir a nenhum objetivo. Escolha outra.</>;
+      } else {
+        actionHint = <>Toque numa <strong>carta da mão</strong> abaixo.</>;
+      }
+    } else if (canRecruit) {
+      actionHint = <>Toque em <strong>Recrutar</strong> para comprar uma carta.</>;
+    } else if (!isMyTurn && !G.gameOver) {
+      actionHint = <>Vez de <strong>{playerName(G, ctx.currentPlayer)}</strong>…</>;
+    }
+
+    return (
+      <div className="game game-mobile">
+        <Banner data={banner} />
+
+        {introOpen && <SetupIntro G={G} onDone={() => setIntroOpen(false)} />}
+        {confrontIntro && G.pendingConfront && (
+          <ConfrontIntro G={G} onContinue={() => setConfrontIntro(false)} />
+        )}
+        {supremacyOpen && G.lastConfront && (
+          <SupremaciaModal
+            G={G}
+            nextPlayer={ctx.currentPlayer}
+            onContinue={() => setSupremacyOpen(false)}
+          />
+        )}
+        {manualOpen && <ManualModal onClose={() => setManualOpen(false)} />}
+
+        {/* Topbar compacta */}
+        <header className="mob-topbar">
+          <button className="mob-icon-btn" onClick={onExit} aria-label="Voltar ao menu">
+            ←
+          </button>
+          <div className="mob-brand">D.I.E.S.E.L.</div>
+          <div className="mob-phase">
+            {PHASE_LABEL[ctx.phase] ?? ctx.phase}
+            {' · '}
+            {playerName(G, ctx.currentPlayer)}
+          </div>
+          <button
+            className="mob-icon-btn"
+            onClick={() => setMobilePlayersOpen(true)}
+            aria-label="Ver jogadores"
+            title="Jogadores"
+          >
+            👥
+          </button>
+          <button
+            className="mob-icon-btn"
+            onClick={() => setManualOpen(true)}
+            aria-label="Abrir manual"
+            title="Manual"
+          >
+            ?
+          </button>
+        </header>
+
+        {/* Campo de batalha (scrollável) */}
+        <main className="mob-main">
+          <div className="mob-battlefield">
+            {G.battlefield.map((slot: any) => {
+              const obj = OBJECTIVE_BY_ID[slot.objectiveId];
+              const myCount = slot.attachments.filter((a: any) => a.playerId === playerID).length;
+              const threshold = conflictThreshold(slot.objectiveId);
+              const canDropHere =
+                canAdvance && !!selected && myCount < threshold &&
+                !isCardForbidden(selected, slot.objectiveId);
+
+              return (
+                <div key={slot.objectiveId} className="mob-slot" data-slot-id={slot.objectiveId}>
+                  <div className="objective-name">{obj.name}</div>
+                  <img
+                    src={obj.image}
+                    alt={obj.name}
+                    className={`obj-img ${canDropHere ? 'highlight' : ''}`}
+                    onClick={
+                      canDropHere
+                        ? () => {
+                            moves.advance(selected!, slot.objectiveId);
+                            setSelected(null);
+                          }
+                        : undefined
+                    }
+                    draggable={false}
+                  />
+                  <div className="attachments">
+                    {slot.attachments.map((att: any, i: number) => {
+                      const hidden = !att.cardId;
+                      const base = hidden ? null : MILITARY_BY_ID[att.cardId];
+                      const src = base ? base.image : CARD_BACKS.military;
+                      const mods: string[] = [];
+                      if (base && att.valueMod) mods.push(att.valueMod > 0 ? '+1' : '−1');
+                      if (base && att.typeOverride) mods.push(`→${TYPE_LABEL[att.typeOverride as MilitaryType]?.slice(0, 3)}`);
+                      const tag = G.players[att.playerId]?.isAutoma
+                        ? `A${att.playerId}` : `J${att.playerId}`;
+                      return (
+                        <div key={i} className="mini">
+                          <img src={src} alt={hidden ? 'Oculta' : base?.name ?? 'Carta'} draggable={false} />
+                          <span className="mini-tag">{tag}</span>
+                          {mods.length > 0 && <span className="mini-mod">{mods.join(' ')}</span>}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </main>
+
+        {/* Mão sempre visível */}
+        <section className="mob-hand">
+          <div className="mob-hand-label">Minha mão ({me.hand.length})</div>
+          <div className="mob-hand-row">
+            {me.hand.length === 0 && (
+              <p className="mob-hint" style={{ margin: 0 }}>Sem cartas na mão.</p>
+            )}
+            {me.hand.map((id: string) => {
+              const isSelected = selected === id;
+              return (
+                <div
+                  key={id}
+                  className={`mob-hand-card ${isSelected ? 'selected' : ''}`}
+                  onClick={
+                    canAdvance
+                      ? () => setSelected(isSelected ? null : id)
+                      : undefined
+                  }
+                >
+                  <img src={MILITARY_BY_ID[id].image} alt={MILITARY_BY_ID[id].name} draggable={false} />
+                </div>
+              );
+            })}
+          </div>
+        </section>
+
+        {/* Barra de ações contextual */}
+        <div className="mob-action-bar">
+          {actionHint && <div className="mob-action-hint">{actionHint}</div>}
+
+          {canRecruit && (
+            <div className="mob-action-row">
+              <button
+                className="mob-btn mob-btn-primary"
+                onClick={() => setMobileMarketOpen(true)}
+              >
+                Recrutar
+              </button>
+            </div>
+          )}
+
+          {canReinforce && (
+            <div className="mob-action-row">
+              <button
+                className="mob-btn mob-btn-primary"
+                onClick={() => setMobileReinforceOpen(true)}
+              >
+                Reforçar
+              </button>
+              <button
+                className="mob-btn mob-btn-ghost"
+                onClick={() => moves.passReinforce()}
+              >
+                Passar
+              </button>
+            </div>
+          )}
+
+          {canModify && (
+            <div className="mob-action-row">
+              <button
+                className="mob-btn mob-btn-primary"
+                onClick={() => setMobileModifyOpen(true)}
+              >
+                Modificar
+              </button>
+              <button
+                className="mob-btn mob-btn-ghost"
+                onClick={() => moves.passModify()}
+              >
+                Não modificar
+              </button>
+            </div>
+          )}
+
+          {!canAdvance && !canRecruit && !canReinforce && !canModify && !actionHint && (
+            <div className="mob-action-hint">Aguardando…</div>
+          )}
+        </div>
+
+        {/* Modais */}
+        {mobileMarketOpen && (
+          <MobileMarketModal
+            G={G}
+            moves={moves}
+            onClose={() => setMobileMarketOpen(false)}
+          />
+        )}
+        {mobileReinforceOpen && (
+          <MobileReinforceModal
+            G={G}
+            moves={moves}
+            playerID={playerID}
+            onClose={() => setMobileReinforceOpen(false)}
+          />
+        )}
+        {mobileModifyOpen && confrontSlot && (
+          <MobileModifyModal
+            G={G}
+            moves={moves}
+            playerID={playerID}
+            slot={confrontSlot}
+            onClose={() => setMobileModifyOpen(false)}
+          />
+        )}
+        {mobilePlayersOpen && (
+          <MobilePlayersModal
+            G={G}
+            playerID={playerID}
+            onClose={() => setMobilePlayersOpen(false)}
+          />
+        )}
+      </div>
+    );
+  };
+
+  if (isMobile) return renderMobile();
+
+  /* ================================================================ */
+  /* DESKTOP / TABLET — render original, intocado                     */
+  /* ================================================================ */
   return (
     <div className="game">
       <Banner data={banner} />
@@ -860,7 +1407,6 @@ function GameRoot({ options, onExit }: { options: GameOptions; onExit: () => voi
 export default function App() {
   const [options, setOptions] = useState<GameOptions | null>(null);
   const handleExit = useCallback(() => setOptions(null), []);
-  // Abertura exibida uma única vez por visita: 'show' → 'leaving' → 'done'.
   const [splash, setSplash] = useState<'show' | 'leaving' | 'done'>('show');
 
   if (options) return <GameRoot options={options} onExit={handleExit} />;
