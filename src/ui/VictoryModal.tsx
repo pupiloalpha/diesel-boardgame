@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import type { CSSProperties } from 'react';
 import type { GameState } from '../game/types';
 import { CARD_BACKS, FACTION_BY_ID, OBJECTIVE_BY_ID } from '../game/data';
+import { rankPlayers } from '../game/game';
 import { playerName } from './shared';
 
 interface Props {
@@ -21,28 +22,36 @@ export default function VictoryModal({ G, onExit }: Props) {
   }, []);
 
   const solo = G.options.solo;
+  const soloVictoryRule = solo && (G.options.soloOnly ?? true);
   const youWon = G.winnerId === '0';
+  const defeat = soloVictoryRule && !youWon;
+
+  const ranking = rankPlayers(G).map((r) => {
+    const p = G.players[r.playerId];
+    return {
+      pid: r.playerId,
+      faction: FACTION_BY_ID[p.factionId],
+      objectives: r.objectives,
+      pv: r.pv,
+    };
+  });
+
   const winner = G.winnerId ? G.players[G.winnerId] : undefined;
   const faction = winner ? FACTION_BY_ID[winner.factionId] : undefined;
 
-  const ranking = Object.entries(G.players)
-    .map(([pid, p]) => ({
-      pid,
-      faction: FACTION_BY_ID[p.factionId],
-      objectives: p.objectivesWon.length,
-      pv: p.objectivesWon.reduce((s, id) => s + (OBJECTIVE_BY_ID[id]?.pv ?? 0), 0),
-    }))
-    .sort((a, b) => b.pv - a.pv);
+  const title = soloVictoryRule
+    ? (youWon ? 'Vitória!' : 'Derrota')
+    : 'Fim de jogo';
 
-  const defeat = solo && !youWon;
-  const title = solo ? (youWon ? 'Vitória!' : 'Derrota') : 'Fim de jogo';
-  const subtitle = solo
-    ? youWon
-      ? 'Você conquistou todos os objetivos.'
-      : 'Os autômatos conquistaram objetivos.'
+  const subtitle = soloVictoryRule
+    ? (youWon
+        ? 'Você conquistou todos os objetivos.'
+        : 'Você não conquistou todos os objetivos — no modo solo essa é a única condição de vitória.')
     : G.winnerId
       ? `Vencedor: ${playerName(G, G.winnerId)}`
       : '';
+
+  const isWinnerRow = (pid: string) => !defeat && pid === G.winnerId;
 
   return (
     <div className="vm-overlay" role="dialog" aria-modal="true" aria-labelledby="vm-title">
@@ -50,7 +59,7 @@ export default function VictoryModal({ G, onExit }: Props) {
         <h1 id="vm-title">{title}</h1>
         <p className="vm-sub">{subtitle}</p>
 
-        {faction && (
+        {faction && !defeat && (
           <div className="vm-stage">
             <div className={`vm-rays ${opened ? 'on' : ''}`} aria-hidden="true" />
             {opened &&
@@ -83,7 +92,7 @@ export default function VictoryModal({ G, onExit }: Props) {
         )}
 
         <div className="vm-caption" aria-live="polite">
-          {faction
+          {faction && !defeat
             ? opened
               ? <>Facção campeã: <strong>{faction.name}</strong></>
               : 'Revelando a facção campeã…'
@@ -92,10 +101,10 @@ export default function VictoryModal({ G, onExit }: Props) {
 
         <ul className="vm-rank">
           {ranking.map((r) => (
-            <li key={r.pid} className={r.pid === G.winnerId ? 'winner' : ''}>
+            <li key={r.pid} className={isWinnerRow(r.pid) ? 'winner' : ''}>
               <img src={r.faction.image} alt={r.faction.name} draggable={false} />
               <span className="vm-rank-name">
-                {r.pid === G.winnerId && <b aria-hidden="true">★ </b>}
+                {isWinnerRow(r.pid) && <b aria-hidden="true">★ </b>}
                 {playerName(G, r.pid)}
                 <small>{r.faction.name}</small>
               </span>

@@ -193,14 +193,33 @@ export default function ManualModal({ onClose }: Props) {
               ))}
             </ul>
 
-            <h4>Modo solo (contra Autômatos)</h4>
-            <ul>
-              <li>Jogue contra 1 a 3 Autômatos.</li>
-              <li>Você <strong>só vence</strong> conquistando <strong>TODAS</strong> as Cartas de Objetivo.</li>
-              <li>Cada Autômato é alocado aleatoriamente a 1 objetivo no setup e sempre joga nele.</li>
-              <li>Na vez do Autômato, ele compra uma carta do Mercado e a anexa <em>revelada</em> ao seu objetivo.</li>
-              <li>Em confrontos, o Autômato sempre aplica a vantagem de facção / objetivo / habilidade conquistada que maximize sua força.</li>
-            </ul>
+<h4>Modo solo (contra Autômatos)</h4>
+<ul>
+  <li>Jogue contra 1 a 3 Autômatos.</li>
+  <li>Você <strong>só vence</strong> conquistando <strong>TODAS</strong> as Cartas de Objetivo.</li>
+  <li>Cada Autômato é alocado aleatoriamente a 1 objetivo no setup e sempre joga nele.</li>
+  <li>Na vez do Autômato, ele compra uma carta do Mercado e a anexa <em>revelada</em> ao seu objetivo.</li>
+  <li>Em confrontos, o Autômato sempre aplica a vantagem de facção / objetivo / habilidade conquistada que maximize sua força.</li>
+</ul>
+
+<h4>Competitivo vs. Autômatos</h4>
+<p>
+  Uma variação legítima das regras: os Autômatos jogam exatamente como acima, mas a
+  <strong> condição de vitória</strong> é a <strong>padrão competitiva</strong> — vence quem
+  tiver mais Pontos de Vitória quando o deck de Objetivos se esgotar.
+</p>
+<ul>
+  <li>Não é preciso conquistar todos os objetivos.</li>
+  <li>O empate segue o critério padrão do manual: mais distante do primeiro jogador em sentido horário.</li>
+  <li>Combinável com <em>partida longa</em> e <em>facções assimétricas</em>.</li>
+</ul>
+
+<p><strong>Níveis de inteligência</strong> (escolhidos no menu):</p>
+<ul>
+  <li><strong>Básico</strong> — sorteia uma carta válida do Mercado, sem otimizar combinações. Passa nos Reforços.</li>
+  <li><strong>Otimizado</strong> — escolhe a carta do Mercado que maximiza a melhor combinação do seu Objetivo (par, sequência, trinca). Passa nos Reforços.</li>
+  <li><strong>Estratégico</strong> — como o Otimizado, mas também <em>reforça</em> nos confrontos em que o seu Objetivo está em disputa, sempre que a melhor carta do Mercado o fizer superar os adversários <em>visíveis</em>.</li>
+</ul>
             <p>
               <strong>Níveis de inteligência</strong> (escolhidos no menu):
             </p>

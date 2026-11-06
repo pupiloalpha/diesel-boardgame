@@ -3,18 +3,8 @@ import { FACTION_BY_ID, OBJECTIVE_BY_ID } from '../game/data';
 import { rankPlayers, remainingObjectives } from '../game/game';
 import { playerName } from './shared';
 
-/**
- * Etapa 4 do turno — SUPREMACIA (manual):
- * "Se a última Carta de Objetivo foi conquistada neste turno, o jogo termina e
- *  o jogador com mais Pontos de Vitória vence. Caso contrário, o turno do
- *  jogador termina e é a vez do próximo."
- *
- * Exibida logo após cada Conquista. No fim da partida antecede o VictoryModal.
- */
-
 interface Props {
   G: GameState;
-  /** Jogador que joga a seguir (ignorado quando a partida terminou). */
   nextPlayer?: string;
   onContinue: () => void;
 }
@@ -26,10 +16,11 @@ export default function SupremaciaModal({ G, nextPlayer, onContinue }: Props) {
   const remaining = remainingObjectives(G);
   const over = G.gameOver;
   const solo = G.options.solo;
+  const soloVictoryRule = solo && (G.options.soloOnly ?? true); // regra especial do manual
   const total = Math.max(1, G.totalObjectives);
 
   const leaders = ranking.filter((r) => r.pv === ranking[0].pv);
-  const tied = !solo && over && leaders.length > 1;
+  const tied = over && !soloVictoryRule && leaders.length > 1;
   const youWon = G.winnerId === '0';
 
   let verdict: string;
@@ -37,13 +28,23 @@ export default function SupremaciaModal({ G, nextPlayer, onContinue }: Props) {
     verdict =
       `Ainda restam ${remaining} Carta(s) de Objetivo em disputa. O jogo continua` +
       (nextPlayer ? ` — vez de ${playerName(G, nextPlayer)}.` : '.');
-  } else if (solo) {
+  } else if (soloVictoryRule) {
     verdict = youWon
       ? 'A última Carta de Objetivo foi conquistada e você ficou com todas!'
       : 'A última Carta de Objetivo foi conquistada, mas no modo solo só vence quem conquista TODAS.';
+  } else if (solo) {
+    // Competitivo vs. Autômatos: vitória padrão por PV.
+    verdict = `A última Carta de Objetivo foi conquistada! Vitória por maior PV: ${playerName(G, G.winnerId!)}.`;
   } else {
-    verdict = 'A última Carta de Objetivo foi conquistada! O jogo termina e vence quem tem mais PV.';
+    verdict =
+      'A última Carta de Objetivo foi conquistada! O jogo termina e vence quem tem mais PV.';
   }
+
+  const isLeadRow = (pid: string, pv: number): boolean => {
+    if (!over) return pv > 0 && pv === ranking[0].pv;
+    if (soloVictoryRule) return youWon && pid === '0';
+    return pid === G.winnerId;
+  };
 
   return (
     <div
@@ -72,14 +73,14 @@ export default function SupremaciaModal({ G, nextPlayer, onContinue }: Props) {
         )}
 
         <ul className="sm-rank">
-          {ranking.map((r, i) => {
+          {ranking.map((r) => {
             const f = FACTION_BY_ID[G.players[r.playerId].factionId];
-            const isLead = r.pv > 0 && r.pv === ranking[0].pv;
+            const lead = isLeadRow(r.playerId, r.pv);
             return (
-              <li key={r.playerId} className={isLead ? 'lead' : ''}>
+              <li key={r.playerId} className={lead ? 'lead' : ''}>
                 <img src={f.image} alt={f.name} draggable={false} />
                 <span className="sm-name">
-                  {over && i === 0 && !solo && <b aria-hidden="true">★ </b>}
+                  {lead && <b aria-hidden="true">★ </b>}
                   {playerName(G, r.playerId)}
                   <small>{f.name}</small>
                   <span className="sm-bar" aria-hidden="true">
@@ -96,8 +97,9 @@ export default function SupremaciaModal({ G, nextPlayer, onContinue }: Props) {
 
         {tied && (
           <p className="sm-note">
-            Empate em {ranking[0].pv} PV entre {leaders.map((l) => playerName(G, l.playerId)).join(', ')}.
-            Critério de desempate: o jogador mais distante do Primeiro Jogador, no sentido horário.
+            Empate em {ranking[0].pv} PV entre{' '}
+            {leaders.map((l) => playerName(G, l.playerId)).join(', ')}. Critério de
+            desempate: o jogador mais distante do Primeiro Jogador, no sentido horário.
           </p>
         )}
 

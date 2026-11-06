@@ -1318,22 +1318,65 @@ function Board({ G, ctx, moves, playerID, onExit }: any) {
 /* Lobby                                                               */
 /* ------------------------------------------------------------------ */
 
+type GameMode = 'hotseat' | 'solo' | 'coop';
+
 function Lobby({ onStart, reveal }: { onStart: (o: GameOptions) => void; reveal: boolean }) {
-  const [solo, setSolo] = useState(false);
+  const [mode, setMode] = useState<GameMode>('hotseat');
   const [numPlayers, setNumPlayers] = useState(4);
   const [automas, setAutomas] = useState(1);
   const [difficulty, setDifficulty] = useState<AutomaDifficulty>('medium');
   const [long, setLong] = useState(false);
   const [asymmetric, setAsymmetric] = useState(false);
 
+  const start = () => {
+    if (mode === 'hotseat') {
+      onStart({ numPlayers, long, asymmetric, solo: false, automas: 0 });
+      return;
+    }
+    onStart({
+      numPlayers: 1 + automas,
+      long,
+      asymmetric,
+      solo: true,
+      automas,
+      difficulty,
+      // Regra de vitória especial apenas no modo solo clássico.
+      soloOnly: mode === 'solo',
+    });
+  };
+
   return (
     <div className={`lobby ${reveal ? 'lobby-reveal' : 'lobby-wait'}`}>
       <h1>D.I.E.S.E.L.</h1>
       <p className="hint">Distopia · Indústria · Estratégia · Supremacia · Energia · Leviatãs</p>
+
       <h3>Modo de jogo</h3>
-      <label><input type="radio" checked={!solo} onChange={() => setSolo(false)} /> Multijogador (hotseat)</label>
-      <label><input type="radio" checked={solo} onChange={() => setSolo(true)} /> Solo contra Autômatos</label>
-      {!solo ? (
+      <label>
+        <input
+          type="radio"
+          checked={mode === 'hotseat'}
+          onChange={() => setMode('hotseat')}
+        />{' '}
+        Multijogador (hotseat)
+      </label>
+      <label>
+        <input
+          type="radio"
+          checked={mode === 'solo'}
+          onChange={() => setMode('solo')}
+        />{' '}
+        Solo — você só vence conquistando todos os objetivos
+      </label>
+      <label>
+        <input
+          type="radio"
+          checked={mode === 'coop'}
+          onChange={() => setMode('coop')}
+        />{' '}
+        Competitivo vs. Autômatos — vence quem tiver mais PV
+      </label>
+
+      {mode === 'hotseat' ? (
         <>
           <h3>Jogadores</h3>
           <select value={numPlayers} onChange={(e) => setNumPlayers(Number(e.target.value))}>
@@ -1359,19 +1402,19 @@ function Lobby({ onStart, reveal }: { onStart: (o: GameOptions) => void; reveal:
             <option value="medium">Otimizado — busca a melhor combinação</option>
             <option value="hard">Estratégico — também reforça em confrontos</option>
           </select>
-          <p className="hint">No modo solo você só vence se conquistar TODOS os objetivos.</p>
+          <p className="hint">
+            {mode === 'solo'
+              ? 'No modo solo você só vence se conquistar TODOS os objetivos.'
+              : 'No competitivo vs. autômatos vale a regra padrão: vence quem tiver mais PV.'}
+          </p>
         </>
       )}
+
       <h3>Regras opcionais</h3>
       <label><input type="checkbox" checked={long} onChange={(e) => setLong(e.target.checked)} /> Partida longa (usa os 12 objetivos)</label>
       <label><input type="checkbox" checked={asymmetric} onChange={(e) => setAsymmetric(e.target.checked)} /> Facções assimétricas</label>
-      <button
-        onClick={() =>
-          onStart({ numPlayers, long, asymmetric, solo, automas, difficulty })
-        }
-      >
-        Iniciar partida
-      </button>
+
+      <button onClick={start}>Iniciar partida</button>
     </div>
   );
 }

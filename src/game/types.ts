@@ -47,6 +47,17 @@ export interface GameOptions {
   automas: number;
   /** Nível de IA dos autômatos. Padrão: 'medium'. */
   difficulty?: AutomaDifficulty;
+  /**
+   * Regra de vitória especial do manual: "no modo solo você só vence
+   * conquistando TODAS as Cartas de Objetivo."
+   *
+   * • `true` (padrão quando `solo`): condição binária, como no manual.
+   * • `false`: comportamento competitivo padrão (maior PV vence) mesmo
+   *   com autômatos em jogo — é o novo modo "Competitivo vs. Autômatos".
+   *
+   * Ignorado quando `solo === false`.
+   */
+  soloOnly?: boolean;
 }
 
 export interface PlayerState {

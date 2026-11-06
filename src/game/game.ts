@@ -293,17 +293,33 @@ export function remainingObjectives(G: Pick<GameState, 'objectiveDeck' | 'battle
   return G.objectiveDeck.length + G.battlefield.length;
 }
 
+/**
+ * Etapa 4 — SUPREMACIA.
+ *
+ * • Competitivo padrão (hotseat) ou "Competitivo vs Autômatos": maior PV
+ *   vence. Empate: jogador mais distante do primeiro em sentido horário.
+ * • Solo clássico (manual): "você só vence se conquistar TODAS as Cartas
+ *   de Objetivo". Resultado binário: `winnerId = '0'` (vitória) ou `null`
+ *   (derrota). Não há "autômato vencedor".
+ *
+ * A distinção é feita por `G.options.soloOnly` (default `true` quando
+ * `G.options.solo`). Isso desacopla "há autômatos?" de "qual é a regra
+ * de vitória?".
+ */
 function checkSupremacy(G: GameState) {
   if (remainingObjectives(G) > 0) return;
 
   G.gameOver = true;
-  if (G.options.solo && G.players['0'].objectivesWon.length >= G.totalObjectives) {
-    G.winnerId = '0';
+
+  const soloVictoryRule = G.options.solo && (G.options.soloOnly ?? true);
+  if (soloVictoryRule) {
+    const humanWon = G.players['0'].objectivesWon.length >= G.totalObjectives;
+    G.winnerId = humanWon ? '0' : null;
     return;
   }
-  const ids = Object.keys(G.players);
-  const pool = G.options.solo ? ids.filter((id) => G.players[id].isAutoma) : ids;
-  G.winnerId = rankPlayers(G, pool)[0].playerId;
+
+  // Competitivo padrão: ranking geral por PV.
+  G.winnerId = rankPlayers(G)[0].playerId;
 }
 
 function resolveConfront(G: GameState, numPlayers: number) {
@@ -814,7 +830,7 @@ export function createDiesel(options: GameOptions): Game<GameState> {
       },
     },
 
-    endIf: ({ G }) => (G.gameOver ? { winner: G.winnerId } : undefined),
+    endIf: ({ G }) => (G.gameOver ? { winner: G.winnerId ?? undefined } : undefined),
 
     playerView: ({ G, playerID }) => {
       const players: Record<string, PlayerState> = {};
