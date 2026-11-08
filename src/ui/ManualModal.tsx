@@ -108,9 +108,11 @@ export default function ManualModal({ onClose }: Props) {
             <p>Em sentido horário, cada jogador executa seu turno em 4 etapas:</p>
             <ol>
               <li>
-                <strong>Avanço</strong> — Jogue 1 carta militar anexa a uma das Cartas de Objetivo em jogo.
-                Se for a primeira carta sua naquele objetivo, ela entra <em>revelada</em>; caso contrário, <em>oculta</em>.
-              </li>
+  <strong>Avanço</strong> — Jogue 1 carta militar anexa a uma das Cartas de
+  Objetivo em jogo. Se for a primeira carta sua naquele objetivo, ela entra{' '}
+  <em>revelada</em>; caso contrário, <em>oculta</em>. Suas cartas ficam
+  agrupadas com sua carta de facção, identificando o dono.
+</li>
               <li>
                 <strong>Recrutamento</strong> — Compre 1 carta do Mercado (repõe imediatamente) ou do topo
                 do deck militar, até completar a mão de 3 cartas.

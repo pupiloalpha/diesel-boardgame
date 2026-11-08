@@ -131,52 +131,108 @@
   50%      { box-shadow: 0 0 18px rgba(var(--green-rgb), 1); }
 }
 
+/* ---------- Anexos agrupados por jogador (mobile) ---------- */
+
 .mob-slot .attachments {
   display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 2px;
+  flex-direction: column;
+  gap: 3px;
   width: 100%;
   min-height: 40px;
+  padding: 0;
+}
+
+.mob-slot .player-group {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  width: 100%;
+  padding: 2px 3px;
+  background: rgba(0, 0, 0, 0.4);
+  border-radius: 3px;
+  border-left: 2px solid var(--border-lit);
+}
+
+/* Cores por playerId — reforço visual rápido */
+.mob-slot .player-group[data-pid="0"] { border-left-color: #6fb09a; }
+.mob-slot .player-group[data-pid="1"] { border-left-color: #c9501f; }
+.mob-slot .player-group[data-pid="2"] { border-left-color: #f2a33a; }
+.mob-slot .player-group[data-pid="3"] { border-left-color: #6a8fbf; }
+
+.mob-slot .player-group-id {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+  min-width: 14px;
+}
+
+.mob-slot .player-group-faction {
+  width: 14px;
+  aspect-ratio: 5 / 7;
+  object-fit: cover;
+  border-radius: 2px;
+}
+
+.mob-slot .player-group-tag {
+  font-size: 0.42rem;
+  font-weight: 700;
+  color: var(--parchment);
+  line-height: 1;
+  letter-spacing: 0.02em;
+}
+
+.mob-slot .player-group-cards {
+  flex: 1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1px;
+  min-width: 0;
 }
 
 .mob-slot .mini {
   position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
+  flex-shrink: 0;
 }
 
 .mob-slot .mini img {
-  width: 30px;
+  width: 26px;
   aspect-ratio: 5 / 7;
   object-fit: cover;
   border-radius: 3px;
   border: 1px solid var(--border-lit);
 }
 
-.mob-slot .mini-tag {
-  font-size: 0.5rem;
-  line-height: 1;
-  padding: 0 3px;
-  margin-top: 1px;
-  border-radius: 2px;
-  background: rgba(var(--brass-bright-rgb), 0.85);
-  color: var(--ink);
-  font-weight: 700;
-}
+/* Compatibilidade: esconde o tag antigo caso algum render antigo persista */
+.mob-slot .mini-tag { display: none; }
 
 .mob-slot .mini-mod {
   position: absolute;
-  top: -3px;
-  right: -6px;
-  font-size: 0.48rem;
+  top: -2px;
+  right: -3px;
   padding: 0 3px;
+  font-size: 0.44rem;
+  line-height: 1.3;
+  font-weight: 700;
+  white-space: nowrap;
   border-radius: 2px;
   background: var(--amber);
   color: var(--ink);
-  font-weight: 700;
-  white-space: nowrap;
+  pointer-events: none;
+}
+
+/* Em telas bem pequenas, aperta mais um pouco */
+@media (max-width: 360px) {
+  .mob-slot .mini img { width: 22px; }
+  .mob-slot .player-group-faction { width: 12px; }
+}
+
+/* Em telas um pouco maiores, devolve presença */
+@media (min-width: 420px) {
+  .mob-slot .mini img { width: 30px; }
+  .mob-slot .player-group-faction { width: 16px; }
+  .mob-slot .player-group-tag { font-size: 0.46rem; }
 }
 
 /* ---------- Mão em leque (mobile) ---------- */

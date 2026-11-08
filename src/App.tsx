@@ -111,6 +111,82 @@ function StepIndicator({ G, ctx, supremacy }: any) {
   );
 }
 
+/**
+ * Agrupa as cartas anexadas a um slot por jogador (ordem estável = ordem
+ * numérica do playerId). Mantém a coerência do manual: uma facção por grupo.
+ */
+function groupAttachmentsByPlayer(slot: { attachments: any[] }) {
+  const byPid = new Map<string, any[]>();
+  for (const att of slot.attachments) {
+    const list = byPid.get(att.playerId) ?? [];
+    list.push(att);
+    byPid.set(att.playerId, list);
+  }
+  return Array.from(byPid.entries())
+    .sort(([a], [b]) => a.localeCompare(b, undefined, { numeric: true }))
+    .map(([pid, atts]) => ({ pid, atts }));
+}
+
+/**
+ * Bloco visual reutilizado no desktop e no mobile: um grupo por jogador,
+ * com miniatura de facção + tag (J0/A1) + cartas anexadas.
+ */
+function AttachmentsByPlayer({
+  slot, players,
+}: {
+  slot: { attachments: any[] };
+  players: Record<string, any>;
+}) {
+  const groups = groupAttachmentsByPlayer(slot);
+  return (
+    <>
+      {groups.map(({ pid, atts }) => {
+        const p = players[pid];
+        const faction = p ? FACTION_BY_ID[p.factionId] : null;
+        const tag = p?.isAutoma ? `A${pid}` : `J${pid}`;
+        return (
+          <div className="player-group" data-pid={pid} key={pid}>
+            <div className="player-group-id">
+              {faction && (
+                <img
+                  src={faction.image}
+                  alt={faction.name}
+                  className="player-group-faction"
+                  draggable={false}
+                />
+              )}
+              <span className="player-group-tag">{tag}</span>
+            </div>
+            <div className="player-group-cards">
+              {atts.map((att, i) => {
+                const hidden = !att.cardId;
+                const base = hidden ? null : MILITARY_BY_ID[att.cardId];
+                const src = base ? base.image : CARD_BACKS.military;
+                const mods: string[] = [];
+                if (base && att.valueMod) mods.push(att.valueMod > 0 ? '+1' : '−1');
+                if (base && att.typeOverride) {
+                  mods.push(`→${TYPE_LABEL[att.typeOverride as MilitaryType]?.slice(0, 3)}`);
+                }
+                return (
+                  <div key={i} className="mini">
+                    <img
+                      src={src}
+                      alt={hidden ? 'Carta oculta' : base?.name ?? 'Carta'}
+                      className="card-mini"
+                      draggable={false}
+                    />
+                    {mods.length > 0 && <span className="mini-mod">{mods.join(' ')}</span>}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })}
+    </>
+  );
+}
+
 /* ================================================================== */
 /* Componentes dos modais mobile (recebem apenas o que precisam)      */
 /* ================================================================== */
@@ -690,11 +766,16 @@ function Board({ G, ctx, moves, playerID, onExit }: any) {
     const mini = document.querySelector('.battlefield .card-mini');
     const w = mini instanceof HTMLElement && mini.offsetWidth ? mini.offsetWidth : 46 * bfZoom;
     const h = w * 1.4;
-    const lastMini = area.querySelector('.mini:last-child .card-mini');
+
+    // Mira a ÚLTIMA carta anexada (em qualquer grupo) — após o avanço,
+    // a nova carta entra logo depois dela.
+    const minis = area.querySelectorAll('.mini .card-mini');
+    const lastMini = minis.length > 0 ? minis[minis.length - 1] : null;
     if (lastMini) {
       const b = boxOf(lastMini);
       return { left: b.left + w * 0.5, top: b.top, width: w, height: h };
     }
+
     const r = area.getBoundingClientRect();
     return { left: r.left + r.width / 2 - w / 2, top: r.top + 6, width: w, height: h };
   };
@@ -889,24 +970,8 @@ function Board({ G, ctx, moves, playerID, onExit }: any) {
                     draggable={false}
                   />
                   <div className="attachments">
-                    {slot.attachments.map((att: any, i: number) => {
-                      const hidden = !att.cardId;
-                      const base = hidden ? null : MILITARY_BY_ID[att.cardId];
-                      const src = base ? base.image : CARD_BACKS.military;
-                      const mods: string[] = [];
-                      if (base && att.valueMod) mods.push(att.valueMod > 0 ? '+1' : '−1');
-                      if (base && att.typeOverride) mods.push(`→${TYPE_LABEL[att.typeOverride as MilitaryType]?.slice(0, 3)}`);
-                      const tag = G.players[att.playerId]?.isAutoma
-                        ? `A${att.playerId}` : `J${att.playerId}`;
-                      return (
-                        <div key={i} className="mini">
-                          <img src={src} alt={hidden ? 'Oculta' : base?.name ?? 'Carta'} draggable={false} />
-                          <span className="mini-tag">{tag}</span>
-                          {mods.length > 0 && <span className="mini-mod">{mods.join(' ')}</span>}
-                        </div>
-                      );
-                    })}
-                  </div>
+		     <AttachmentsByPlayer slot={slot} players={G.players} />
+		     </div>
                 </div>
               );
             })}
@@ -1239,25 +1304,9 @@ function Board({ G, ctx, moves, playerID, onExit }: any) {
                           if (suppressClickRef.current) return;
                           handleAdvance(selected!, slot);
                         } : undefined} />
-                      <div className="attachments">
-                        {slot.attachments.map((att: any, i: number) => {
-                          const hidden = !att.cardId;
-                          const base = hidden ? null : MILITARY_BY_ID[att.cardId];
-                          const src = base ? base.image : CARD_BACKS.military;
-                          const mods: string[] = [];
-                          if (base && att.valueMod) mods.push(att.valueMod > 0 ? '+1' : '−1');
-                          if (base && att.typeOverride) mods.push(`→ ${TYPE_LABEL[att.typeOverride as MilitaryType]}`);
-                          const tag = G.players[att.playerId]?.isAutoma ? `A${att.playerId}` : `J${att.playerId}`;
-                          return (
-                            <div key={i} className="mini">
-                              <img src={src} alt={hidden ? 'Carta oculta' : base?.name ?? 'Carta'}
-                                className="card-mini" draggable={false} />
-                              <span className="mini-tag">{tag}</span>
-                              {mods.length > 0 && <span className="mini-mod">{mods.join(' ')}</span>}
-                            </div>
-                          );
-                        })}
-                      </div>
+		    <div className="attachments">
+			  <AttachmentsByPlayer slot={slot} players={G.players} />
+		    </div>
                     </div>
                   );
                 })}
