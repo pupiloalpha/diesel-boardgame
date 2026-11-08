@@ -13,6 +13,7 @@ import {
   isCardForbidden,
   totalPV,
   handSizeFor,
+  isStuck,
 } from './game/game';
 import {
   MILITARY_BY_ID,
@@ -622,6 +623,11 @@ function Board({ G, ctx, moves, playerID, onExit }: any) {
     isMyTurn && isModify &&
     G.modifyQueue.includes(playerID) &&
     !G.modifyDone.includes(playerID);
+  // Manual 2.0 — "ficar sem jogada": precisa comprar do deck até obter
+  // uma carta jogável. Só relevante no início do turno (ainda sem Avanço).
+  const stuckAtStart =
+    isMyTurn && isPlay && !hasAdvanced && !G.pendingConfront &&
+    !iAmAutoma && isStuck(G, playerID);
 
   const contested = G.pendingConfront ? OBJECTIVE_BY_ID[G.pendingConfront] : null;
   const confrontSlot = G.pendingConfront
@@ -757,7 +763,11 @@ function Board({ G, ctx, moves, playerID, onExit }: any) {
   const renderMobile = () => {
     // Hint contextual no rodapé
     let actionHint: React.ReactNode = null;
-    if (canAdvance) {
+    if (stuckAtStart) {
+      actionHint = (
+        <>Sem jogada válida. Use os botões abaixo para <strong>comprar do deck</strong>.</>
+      );
+    } else if (canAdvance) {
       if (selected) {
         const hasValidSlot = G.battlefield.some((slot: any) => {
           const myCount = slot.attachments.filter((a: any) => a.playerId === playerID).length;
@@ -921,7 +931,22 @@ function Board({ G, ctx, moves, playerID, onExit }: any) {
         {/* Barra de ações contextual */}
         <div className="mob-action-bar">
           {actionHint && <div className="mob-action-hint">{actionHint}</div>}
-
+          {stuckAtStart && (
+            <div className="mob-action-row">
+              <button
+                className="mob-btn mob-btn-primary"
+                onClick={() => moves.drawPlayable()}
+              >
+                Comprar carta jogável
+              </button>
+              <button
+                className="mob-btn mob-btn-ghost"
+                onClick={() => moves.skipAdvance()}
+              >
+                Pular
+              </button>
+            </div>
+          )}
           {canRecruit && (
             <div className="mob-action-row">
               <button
@@ -1058,6 +1083,27 @@ function Board({ G, ctx, moves, playerID, onExit }: any) {
             {isMyTurn && isPlay && !hasAdvanced && (
               <p className="hint">Jogue uma carta em um objetivo antes de recrutar.</p>
             )}
+          {stuckAtStart && (
+            <section className="stuck-warning">
+              <p className="hint" style={{ margin: 0 }}>
+                <strong>Sem jogada válida.</strong>{' '}
+                Compre do topo do deck até obter uma carta jogável (as não
+                jogáveis serão descartadas).
+              </p>
+              <button
+                onClick={() => moves.drawPlayable()}
+                style={{ marginTop: 8 }}
+              >
+                Comprar carta jogável
+              </button>
+              <button
+                onClick={() => moves.skipAdvance()}
+                style={{ marginTop: 6 }}
+              >
+                Pular Avanço (sem cartas no deck)
+              </button>
+            </section>
+          )}
             <div className="market">
               {G.market.map((id: string, i: number) => {
                 const c = MILITARY_BY_ID[id];

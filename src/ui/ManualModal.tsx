@@ -8,10 +8,11 @@ interface Props {
 const STRATEGY: { level: number; name: string; rule: string }[] = [
   { level: 1, name: 'Sem estratégia',        rule: 'Maior valor total somando os valores das cartas (critério de desempate padrão)' },
   { level: 2, name: 'Ataque sincronizado',   rule: '1 par de números iguais' },
-  { level: 3, name: 'Força uniforme',        rule: '3 cartas de mesmo tipo' },
-  { level: 4, name: 'Coordenação total',     rule: 'Sequência de 3 cartas' },
-  { level: 5, name: 'Operação conjunta',     rule: '1 coleção de 3 cartas de mesmo valor' },
-  { level: 6, name: 'Estratégia implacável', rule: 'Sequência de 3 cartas de mesmo tipo' },
+  { level: 3, name: 'Múltiplas frentes',     rule: '3 cartas de tipos diferentes' },
+  { level: 4, name: 'Força uniforme',        rule: '3 cartas de mesmo tipo' },
+  { level: 5, name: 'Coordenação total',     rule: 'Sequência de 3 cartas' },
+  { level: 6, name: 'Operação conjunta',     rule: '1 coleção de 3 cartas de mesmo valor' },
+  { level: 7, name: 'Estratégia implacável', rule: 'Sequência de 3 cartas de mesmo tipo' },
 ];
 
 const ASYMMETRIC: { faction: string; unit: string }[] = [
@@ -165,9 +166,43 @@ export default function ManualModal({ onClose }: Props) {
               </table>
             </div>
             <p className="mn-note">
+              <strong>Observação 1.</strong> Cada carta jogada no conflito
+              só pode compor <strong>uma combinação</strong>. Prevalece
+              sempre a de maior nível. Ex.: um par de “8” dentro de uma
+              trinca do mesmo tipo — vale só o Nível 4.
+            </p>
+            <p className="mn-note">
+              <strong>Observação 2.</strong> Combinações que não compartilham
+              cartas somam seus níveis (2 pares = Nível 4).
+            </p>
+            <p className="mn-note">
+              <strong>Observação 3.</strong> Desempate: (A) maior soma de
+              valores; (B) jogador mais distante do Primeiro Jogador em sentido
+              horário; (C) <strong>maior nível de estratégia entre as cartas
+              da mão</strong>.
+            </p>
+            <p className="mn-note">
               Combinações que <strong>não compartilham cartas</strong> somam seus níveis — por exemplo,
               2 pares = nível 4.
             </p>
+          </section>
+
+          <section className="mn-sec">
+            <h3>Outras regras</h3>
+            <ul>
+              <li>
+                <strong>Ficar sem jogada:</strong> se você (ou o Autômato) não
+                puder jogar <em>nenhuma</em> carta da mão por restrição de tipo
+                dos Objetivos, compre cartas do topo do deck até obter uma
+                jogável. Descarte as demais sacadas. As 3 cartas originais
+                permanecem na mão.
+              </li>
+              <li>
+                <strong>Desempate final:</strong> se 2+ jogadores empatarem em
+                PV ao fim da partida, vence o que tiver o{' '}
+                <strong>maior nível de estratégia entre as cartas da mão</strong>.
+              </li>
+            </ul>
           </section>
 
           <section className="mn-sec">

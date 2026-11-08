@@ -41,3 +41,28 @@ export function handSizeFor(G: GameState, pid: string): number {
   }, 0);
   return HAND_SIZE + bonus;
 }
+
+/**
+ * O jogador está impedido de jogar QUALQUER carta da mão em QUALQUER
+ * slot? (manual 2.0 — "Outras regras": quem fica sem jogada compra do deck
+ * até obter uma carta jogável).
+ *
+ * Considera:
+ *  • restrições de tipo do objetivo;
+ *  • limiar de conflito já atingido pelo jogador no slot.
+ */
+export function isStuck(G: GameState, pid: string): boolean {
+  const me = G.players[pid];
+  if (!me || me.isAutoma) return false;
+  if (G.battlefield.length === 0) return true;
+  for (const cardId of me.hand) {
+    for (const slot of G.battlefield) {
+      const mine = slot.attachments.filter((a) => a.playerId === pid).length;
+      const thr = conflictThreshold(slot.objectiveId);
+      if (mine >= thr) continue;
+      if (isCardForbidden(cardId, slot.objectiveId)) continue;
+      return false; // há pelo menos uma jogada válida
+    }
+  }
+  return true;
+}

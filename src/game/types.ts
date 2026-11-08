@@ -1,8 +1,5 @@
 export type MilitaryType = 'terrestre' | 'aereo' | 'maritimo' | 'heroi';
 
-/** Nível de inteligência dos autômatos. */
-export type AutomaDifficulty = 'easy' | 'medium' | 'hard';
-
 export interface MilitaryCard {
   id: string;
   name: string;
@@ -39,6 +36,9 @@ export interface Faction {
   image: string;
 }
 
+/** Nível de inteligência dos autômatos. */
+export type AutomaDifficulty = 'easy' | 'medium' | 'hard';
+
 export interface GameOptions {
   numPlayers: number;
   long: boolean;
@@ -66,6 +66,12 @@ export interface PlayerState {
   hand: string[];
   objectivesWon: string[];
   isAutoma: boolean;
+  /**
+   * Nível de estratégia da mão — usado apenas como 2º critério de desempate
+   * final (manual 2.0). Preenchido pelo motor; o `playerView` o exibe mesmo
+   * quando a mão está oculta. É atualizado em cada mudança de mão.
+   */
+  handLevel: number;
 }
 
 export interface Attachment {

@@ -23,6 +23,7 @@ import {
   MILITARY_TYPES,
   MIN_VALUE,
   compareScore,
+  handStrategyLevel,
   scoreAttachments,
 } from './combos';
 import {
@@ -31,19 +32,17 @@ import {
   conflictThreshold,
   isCardForbidden,
   handSizeFor,
+  isStuck,
 } from './rules';
-import {
-  pickMarketCardIndex,
-  shouldReinforce,
-} from './automa';
+import { pickMarketCardIndex, shouldReinforce } from './automa';
 
-// Re-exporta os helpers (compatibilidade com importadores existentes).
 export {
   HAND_SIZE,
   objectiveEffects,
   conflictThreshold,
   isCardForbidden,
   handSizeFor,
+  isStuck,
 } from './rules';
 
 const BATTLEFIELD_SIZE = 3;
@@ -62,6 +61,13 @@ function shuffle<T>(arr: T[], random: Rng): T[] {
   return random.Shuffle([...arr]);
 }
 
+/** Recalcula `handLevel` sempre que a mão muda. */
+function refreshHandLevel(G: GameState, pid: string) {
+  const p = G.players[pid];
+  if (!p) return;
+  p.handLevel = handStrategyLevel(p.hand);
+}
+
 function setupPlayers(numPlayers: number, solo: boolean, random: Rng): Record<string, PlayerState> {
   const shuffled = shuffle(FACTIONS, random);
   const players: Record<string, PlayerState> = {};
@@ -72,6 +78,7 @@ function setupPlayers(numPlayers: number, solo: boolean, random: Rng): Record<st
       hand: [],
       objectivesWon: [],
       isAutoma: solo && i > 0,
+      handLevel: 0,
     };
   }
   return players;
@@ -102,7 +109,7 @@ function currentValue(att: Attachment): number | null {
 }
 
 /* ------------------------------------------------------------------ */
-/* Validação (exportada para a UI)                                     */
+/* Validação                                                           */
 /* ------------------------------------------------------------------ */
 
 export function validateModify(
@@ -272,8 +279,14 @@ export interface Standing {
   playerId: string;
   pv: number;
   objectives: number;
+  handLevel: number;
 }
 
+/**
+ * Classificação por PV; desempates (manual 2.0):
+ *   1º — jogador mais distante do Primeiro Jogador no sentido horário
+ *   2º — maior nível de estratégia entre as cartas da mão (`handLevel`)
+ */
 export function rankPlayers(
   G: Pick<GameState, 'players' | 'firstPlayer'>,
   pool?: string[],
@@ -285,27 +298,20 @@ export function rankPlayers(
       playerId,
       pv: totalPV(G, playerId),
       objectives: G.players[playerId].objectivesWon.length,
+      handLevel: G.players[playerId].handLevel ?? 0,
     }))
-    .sort((a, b) => b.pv - a.pv || distance(b.playerId) - distance(a.playerId));
+    .sort((a, b) => {
+      if (b.pv !== a.pv) return b.pv - a.pv;
+      const d = distance(b.playerId) - distance(a.playerId);
+      if (d !== 0) return d;
+      return b.handLevel - a.handLevel;
+    });
 }
 
 export function remainingObjectives(G: Pick<GameState, 'objectiveDeck' | 'battlefield'>): number {
   return G.objectiveDeck.length + G.battlefield.length;
 }
 
-/**
- * Etapa 4 — SUPREMACIA.
- *
- * • Competitivo padrão (hotseat) ou "Competitivo vs Autômatos": maior PV
- *   vence. Empate: jogador mais distante do primeiro em sentido horário.
- * • Solo clássico (manual): "você só vence se conquistar TODAS as Cartas
- *   de Objetivo". Resultado binário: `winnerId = '0'` (vitória) ou `null`
- *   (derrota). Não há "autômato vencedor".
- *
- * A distinção é feita por `G.options.soloOnly` (default `true` quando
- * `G.options.solo`). Isso desacopla "há autômatos?" de "qual é a regra
- * de vitória?".
- */
 function checkSupremacy(G: GameState) {
   if (remainingObjectives(G) > 0) return;
 
@@ -318,7 +324,6 @@ function checkSupremacy(G: GameState) {
     return;
   }
 
-  // Competitivo padrão: ranking geral por PV.
   G.winnerId = rankPlayers(G)[0].playerId;
 }
 
@@ -385,7 +390,6 @@ function automaFindCard(
   slot: BattlefieldSlot,
   random: Rng,
 ): string | undefined {
-  // 1) Mercado — decisão delegada ao módulo de IA (varia por dificuldade).
   const idx = pickMarketCardIndex(G, pid, slot, random);
   if (idx !== undefined) {
     const [card] = G.market.splice(idx, 1);
@@ -393,7 +397,6 @@ function automaFindCard(
     if (next) G.market.push(next);
     return card;
   }
-  // 2) Fallback: deck (descarta as proibidas).
   for (let attempt = 0; attempt < 30; attempt++) {
     const c = drawFromDeck(G, random);
     if (!c) return undefined;
@@ -401,6 +404,49 @@ function automaFindCard(
     G.militaryDiscard.push(c);
   }
   return undefined;
+}
+
+/**
+ * Implementa a regra do manual 2.0: compra do topo do deck até obter uma
+ * carta jogável. Cartas não jogáveis sacadas nesse processo vão para o
+ * descarte. Retorna `true` se encontrou uma carta jogável.
+ *
+ * A carta encontrada é adicionada à mão (que passa a ter 4 cartas
+ * temporariamente). Após o Avanço, a mão volta naturalmente a 3.
+ */
+function drawPlayableIntoHand(
+  G: GameState,
+  pid: string,
+  random: Rng,
+): boolean {
+  const me = G.players[pid];
+  if (!me) return false;
+
+  const handSize = handSizeFor(G, pid);
+  if (me.hand.length >= handSize + 1) return false;
+
+  const canPlay = (cardId: string): boolean => {
+    for (const slot of G.battlefield) {
+      const mine = slot.attachments.filter((a) => a.playerId === pid).length;
+      const thr = conflictThreshold(slot.objectiveId);
+      if (mine >= thr) continue;
+      if (isCardForbidden(cardId, slot.objectiveId)) continue;
+      return true;
+    }
+    return false;
+  };
+
+  for (let attempt = 0; attempt < 40; attempt++) {
+    const card = drawFromDeck(G, random);
+    if (!card) return false;
+    if (canPlay(card)) {
+      me.hand.push(card);
+      refreshHandLevel(G, pid);
+      return true;
+    }
+    G.militaryDiscard.push(card);
+  }
+  return false;
 }
 
 /* ------------------------------------------------------------------ */
@@ -419,6 +465,7 @@ export function createDiesel(options: GameOptions): Game<GameState> {
       const battlefield = objectiveDeck.splice(0, BATTLEFIELD_SIZE).map((objectiveId) => ({ objectiveId, attachments: [] }));
       const market = militaryDeck.splice(0, MARKET_SIZE);
       for (const pid of Object.keys(players)) players[pid].hand = militaryDeck.splice(0, HAND_SIZE);
+      for (const pid of Object.keys(players)) players[pid].handLevel = handStrategyLevel(players[pid].hand);
       const automaSlot: Record<string, number> = {};
       for (const pid of Object.keys(players)) {
         if (players[pid].isAutoma) automaSlot[pid] = Math.floor(random.Number() * BATTLEFIELD_SIZE);
@@ -465,6 +512,7 @@ export function createDiesel(options: GameOptions): Game<GameState> {
                 playerId: pid, cardId, revealed: mine === 0, valueMod: 0, typeOverride: null,
               });
               me.hand = me.hand.filter((id) => id !== cardId);
+              refreshHandLevel(G, pid);
               G.hasAdvanced = true;
 
               if (mine + 1 === threshold) {
@@ -475,12 +523,45 @@ export function createDiesel(options: GameOptions): Game<GameState> {
             },
           },
 
+          /** Manual 2.0 — "ficar sem jogada": compra do deck até achar jogável. */
+          drawPlayable: {
+            client: false,
+            move: ({ G, ctx, random }) => {
+              const pid = ctx.currentPlayer;
+              if (G.hasAdvanced || G.pendingConfront) return INVALID_MOVE;
+              const me = G.players[pid];
+              if (!me || me.isAutoma) return INVALID_MOVE;
+              if (!isStuck(G, pid)) return INVALID_MOVE; // só quando realmente travado
+              if (!drawPlayableIntoHand(G, pid, random)) return INVALID_MOVE;
+            },
+          },
+
+          /**
+           * Válvula de escape: se o jogador ficou travado E não há carta
+           * jogável no deck, o Avanço é pulado (o turno segue para o
+           * Recrutamento). Não é uma regra do manual — é uma proteção
+           * contra deadlock. Só permitido quando realmente não há jogada.
+           */
+          skipAdvance: {
+            client: false,
+            move: ({ G, ctx }) => {
+              const pid = ctx.currentPlayer;
+              if (G.hasAdvanced || G.pendingConfront) return INVALID_MOVE;
+              const me = G.players[pid];
+              if (!me || me.isAutoma) return INVALID_MOVE;
+              if (!isStuck(G, pid)) return INVALID_MOVE;
+              // deck vazio ou nenhuma carta jogável → pula
+              G.hasAdvanced = true;
+            },
+          },
+
           recruit: {
             client: false,
             move: ({ G, ctx, events, random }, source: 'market' | 'deck', marketIndex?: number) => {
               if (!G.hasAdvanced) return INVALID_MOVE;
-              const me = G.players[ctx.currentPlayer];
-              const maxHand = handSizeFor(G, ctx.currentPlayer);
+              const pid = ctx.currentPlayer;
+              const me = G.players[pid];
+              const maxHand = handSizeFor(G, pid);
               if (!me || me.isAutoma || me.hand.length >= maxHand) return INVALID_MOVE;
 
               const nothingToDraw = G.market.length === 0 && G.militaryDeck.length === 0 && G.militaryDiscard.length === 0;
@@ -496,6 +577,7 @@ export function createDiesel(options: GameOptions): Game<GameState> {
                   if (!next) return INVALID_MOVE;
                   me.hand.push(next);
                 }
+                refreshHandLevel(G, pid);
               }
 
               if (G.pendingConfront) events.setPhase('reinforce');
@@ -509,6 +591,13 @@ export function createDiesel(options: GameOptions): Game<GameState> {
               const pid = ctx.currentPlayer;
               const me = G.players[pid];
               if (!me || !me.isAutoma || G.pendingConfront) return INVALID_MOVE;
+
+              // Manual 2.0: automa compra do deck até obter carta jogável
+              // quando não tem nenhuma em mão (na prática, ele sempre
+              // "compra" para a mão no turno; usamos o mesmo helper).
+              if (isStuck(G, pid)) {
+                drawPlayableIntoHand(G, pid, random);
+              }
 
               const slot = G.battlefield[G.automaSlot[pid]] ?? G.battlefield[0];
               if (!slot) { events.endTurn(); return; }
@@ -571,6 +660,7 @@ export function createDiesel(options: GameOptions): Game<GameState> {
                 playerId: pid, cardId, revealed: false, valueMod: 0, typeOverride: null,
               });
               me.hand = me.hand.filter((id) => id !== cardId);
+              refreshHandLevel(G, pid);
 
               const maxHand = handSizeFor(G, pid);
               while (me.hand.length < maxHand) {
@@ -578,6 +668,7 @@ export function createDiesel(options: GameOptions): Game<GameState> {
                 if (!next) break;
                 me.hand.push(next);
               }
+              refreshHandLevel(G, pid);
               G.reinforcePassed.push(pid);
             },
           },
@@ -593,11 +684,6 @@ export function createDiesel(options: GameOptions): Game<GameState> {
             },
           },
 
-          /**
-           * Move específico do autômato para a fase de Reforços.
-           * Decide reforçar (puxando direto do Mercado) ou passar, com
-           * base em `shouldReinforce` (varia conforme a dificuldade).
-           */
           automaReinforce: {
             client: false,
             move: ({ G, ctx, random }) => {
@@ -718,6 +804,7 @@ export function createDiesel(options: GameOptions): Game<GameState> {
               att.valueMod = 0;
               att.typeOverride = null;
               att.revealed = true;
+              refreshHandLevel(G, pid);
               G.modifyDone.push(pid);
             },
           },
@@ -817,6 +904,7 @@ export function createDiesel(options: GameOptions): Game<GameState> {
                   bestAction.att.cardId = bestAction.newCardId;
                   bestAction.att.valueMod = 0;
                   bestAction.att.typeOverride = null;
+                  refreshHandLevel(G, pid);
                 }
               }
               G.modifyDone.push(pid);
