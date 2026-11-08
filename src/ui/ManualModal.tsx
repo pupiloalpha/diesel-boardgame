@@ -181,10 +181,6 @@ export default function ManualModal({ onClose }: Props) {
               horário; (C) <strong>maior nível de estratégia entre as cartas
               da mão</strong>.
             </p>
-            <p className="mn-note">
-              Combinações que <strong>não compartilham cartas</strong> somam seus níveis — por exemplo,
-              2 pares = nível 4.
-            </p>
           </section>
 
           <section className="mn-sec">
