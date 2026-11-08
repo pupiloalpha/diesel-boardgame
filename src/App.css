@@ -1053,3 +1053,37 @@ button:disabled {
     font-size: 0.65rem;
   }
 }
+
+/* =========================================================
+   Lobby — libera scroll no desktop
+   
+   O layout do tabuleiro usa `height: 100vh` + `overflow: hidden`
+   em #root (ver @media min-width: 1101px). Isso é correto quando
+   o tabuleiro está renderizado — ele gerencia o próprio scroll
+   interno em .col-center.
+
+   O Lobby, porém, não é 100vh e cresce conforme as opções
+   (especialmente em solo / competitivo vs. autômatos, que abrem
+   seletores extras). Sem este override, o conteúdo abaixo do
+   botão "Iniciar partida" era cortado sem possibilidade de
+   rolagem em telas ~768px de altura útil.
+
+   `:has(.lobby)` ativa só quando o Lobby está na árvore. Ao
+   iniciar a partida, o Lobby é desmontado e #root volta ao
+   comportamento original automaticamente (o tabuleiro continua
+   com 100vh + overflow: hidden).
+   ========================================================= */
+
+@media (min-width: 1101px) {
+  #root:has(.lobby) {
+    height: auto;
+    max-height: none;
+    overflow: visible;
+  }
+
+  /* O <body> passa a rolar naturalmente. O fundo do body continua
+     cobrindo todo o documento (min-height: 100vh já está no CSS base). */
+  body:has(.lobby) {
+    overflow-y: auto;
+  }
+}
