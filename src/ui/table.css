@@ -127,15 +127,16 @@
   .game { padding-bottom: 0.75rem; }
 
   .col-center {
-    padding-bottom: 0;              /* era 180px — libera a faixa da mão */
+    padding-bottom: 0;
+    /* O scroll do desktop é delegado a esta coluna — ver .bf-scroll abaixo. */
   }
 
   .bf-scroll {
-    max-height: calc(100vh - 180px); /* ~130 topbar + 50 folga */
+    max-height: none;
     min-height: 240px;
+    overflow: visible;
   }
 }
-
 .battlefield {
   --bf-zoom: 1;
   --mini-w: calc(46px * var(--bf-zoom));
