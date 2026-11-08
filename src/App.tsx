@@ -116,10 +116,11 @@ function StepIndicator({ G, ctx, supremacy }: any) {
 /* ================================================================== */
 
 function MobileMarketModal({
-  G, moves, onClose,
+  G, moves, canRecruit, onClose,
 }: {
   G: any;
   moves: any;
+  canRecruit: boolean;
   onClose: () => void;
 }) {
   const nothingToDraw =
@@ -134,17 +135,31 @@ function MobileMarketModal({
           <h3>Mercado</h3>
           <button className="mob-close" onClick={onClose} aria-label="Fechar">✕</button>
         </header>
-        <p className="mob-hint">
-          Toque numa carta do Mercado para recrutá-la — ela é reposta imediatamente.
-        </p>
+
+        {canRecruit ? (
+          <p className="mob-hint">
+            Toque numa carta do Mercado para recrutá-la — ela é reposta imediatamente.
+          </p>
+        ) : (
+          <p className="mob-hint">
+            <strong>Prévia do Mercado.</strong> Você poderá recrutar uma carta
+            após jogar uma carta da mão em um objetivo.
+          </p>
+        )}
+
         <div className="mob-market-grid">
           {G.market.map((id: string, i: number) => {
             const c = MILITARY_BY_ID[id];
+            const onClick = canRecruit
+              ? () => { moves.recruit('market', i); onClose(); }
+              : undefined;
             return (
               <button
                 key={`${id}-${i}`}
-                className="mob-market-card"
-                onClick={() => { moves.recruit('market', i); onClose(); }}
+                type="button"
+                className={`mob-market-card${canRecruit ? '' : ' readonly'}`}
+                onClick={onClick}
+                aria-label={canRecruit ? `Recrutar ${c.name}` : c.name}
               >
                 <img src={c.image} alt={c.name} draggable={false} />
                 <span className="mob-market-label">{c.name}</span>
@@ -152,17 +167,30 @@ function MobileMarketModal({
             );
           })}
         </div>
-        {nothingToDraw && (
-          <p className="mob-hint" style={{ color: 'var(--amber)' }}>
-            Não há mais cartas para comprar. Você pode pular o recrutamento.
-          </p>
+
+        {canRecruit ? (
+          <>
+            {nothingToDraw && (
+              <p className="mob-hint" style={{ color: 'var(--amber)' }}>
+                Não há mais cartas para comprar. Você pode pular o recrutamento.
+              </p>
+            )}
+            <button
+              className="mob-btn mob-btn-primary"
+              onClick={() => { moves.recruit('deck'); onClose(); }}
+            >
+              {nothingToDraw ? 'Pular recrutamento' : 'Comprar do topo do deck'}
+            </button>
+          </>
+        ) : (
+          <button
+            className="mob-btn mob-btn-ghost"
+            style={{ marginTop: 8 }}
+            onClick={onClose}
+          >
+            Fechar
+          </button>
         )}
-        <button
-          className="mob-btn mob-btn-primary"
-          onClick={() => { moves.recruit('deck'); onClose(); }}
-        >
-          {nothingToDraw ? 'Pular recrutamento' : 'Comprar do topo do deck'}
-        </button>
       </div>
     </div>
   );
@@ -885,6 +913,39 @@ function Board({ G, ctx, moves, playerID, onExit }: any) {
           </div>
         </main>
 
+        {/* Faixa compacta do Mercado — sempre visível (planejamento) */}
+        <section className="mob-market-strip" aria-label="Mercado">
+          <span className="mob-market-strip-label">Mercado</span>
+          <div className="mob-market-strip-cards">
+            {G.market.map((id: string, i: number) => {
+              const c = MILITARY_BY_ID[id];
+              return (
+                <button
+                  key={`mkt-${id}-${i}`}
+                  type="button"
+                  className="mob-market-thumb"
+                  onClick={() => setMobileMarketOpen(true)}
+                  aria-label={`Ver carta do mercado: ${c.name}`}
+                  title={c.name}
+                >
+                  <img src={c.image} alt="" draggable={false} />
+                  <span className="mob-market-tag">
+                    {c.value}·{TYPE_LABEL[c.type].charAt(0)}
+                  </span>
+                </button>
+              );
+            })}
+            <button
+              type="button"
+              className="mob-market-thumb mob-market-deck"
+              onClick={() => setMobileMarketOpen(true)}
+              aria-label="Ver o baralho de cartas militares"
+            >
+              <img src={CARD_BACKS.military} alt="" draggable={false} />
+              <span className="count">{G.militaryDeck.length}</span>
+            </button>
+          </div>
+        </section>
                 {/* Mão em leque (sempre visível) */}
         <section className="mob-hand">
           <div className="mob-hand-label">Minha mão ({me.hand.length})</div>
@@ -999,12 +1060,13 @@ function Board({ G, ctx, moves, playerID, onExit }: any) {
 
         {/* Modais */}
         {mobileMarketOpen && (
-          <MobileMarketModal
-            G={G}
-            moves={moves}
-            onClose={() => setMobileMarketOpen(false)}
-          />
-        )}
+  <MobileMarketModal
+    G={G}
+    moves={moves}
+    canRecruit={canRecruit}
+    onClose={() => setMobileMarketOpen(false)}
+  />
+)}
         {mobileReinforceOpen && (
           <MobileReinforceModal
             G={G}

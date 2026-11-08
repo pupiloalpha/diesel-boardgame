@@ -616,3 +616,120 @@
     transition: none !important;
   }
 }
+
+/* ---------- Faixa compacta do Mercado (sempre visível no mobile) ---------- */
+
+.mob-market-strip {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.5rem;
+  background: linear-gradient(0deg, rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.15));
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+
+.mob-market-strip-label {
+  flex-shrink: 0;
+  font-size: 0.58rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--brass);
+  line-height: 1.1;
+  padding-right: 0.35rem;
+  border-right: 1px solid var(--border);
+  text-align: center;
+}
+
+.mob-market-strip-cards {
+  flex: 1;
+  display: flex;
+  gap: 0.3rem;
+  align-items: center;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.mob-market-strip-cards::-webkit-scrollbar { display: none; }
+
+.mob-market-thumb {
+  position: relative;
+  flex-shrink: 0;
+  width: 44px;
+  margin: 0;
+  padding: 0;
+  background: none;
+  border: 1px solid var(--card-edge);
+  border-radius: 4px;
+  overflow: hidden;
+  cursor: pointer;
+  transition: border-color 0.15s, transform 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.mob-market-thumb img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 5 / 7;
+  object-fit: cover;
+}
+
+.mob-market-thumb:hover,
+.mob-market-thumb:active {
+  border-color: var(--brass-bright);
+  transform: translateY(-2px);
+}
+
+/* Badge de valor + tipo para leitura em telas pequenas */
+.mob-market-tag {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: rgba(0, 0, 0, 0.85);
+  color: var(--brass-bright);
+  font-size: 0.55rem;
+  font-weight: 700;
+  text-align: center;
+  padding: 1px 0;
+  line-height: 1.3;
+  pointer-events: none;
+}
+
+/* Deck (contador de cartas restantes) */
+.mob-market-deck .count {
+  position: absolute;
+  bottom: -2px;
+  right: -2px;
+  min-width: 16px;
+  padding: 0 4px;
+  font-size: 0.55rem;
+  font-weight: 700;
+  line-height: 1.4;
+  text-align: center;
+  background: var(--brass-bright);
+  color: var(--ink);
+  border-radius: 8px;
+  box-shadow: var(--shadow-sm);
+}
+
+/* Ajuste de cartas por largura de tela */
+@media (max-width: 360px) {
+  .mob-market-thumb { width: 38px; }
+  .mob-market-strip-label { font-size: 0.5rem; padding-right: 0.25rem; }
+}
+
+@media (min-width: 420px) {
+  .mob-market-thumb { width: 50px; }
+}
+
+/* Estado "somente leitura" no modal */
+.mob-market-card.readonly {
+  cursor: default;
+}
+.mob-market-card.readonly:hover img {
+  border-color: var(--card-edge);
+  transform: none;
+}
