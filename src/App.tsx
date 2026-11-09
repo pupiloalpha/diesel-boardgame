@@ -646,22 +646,21 @@ function Board({ G, ctx, moves, playerID, onExit }: any) {
     if (bannerTimer.current) window.clearTimeout(bannerTimer.current);
   }, []);
 
-    /**
+  /**
    * Retorna o elemento scrollável real do campo de batalha.
    *
-   * Por padrão, é o próprio `.bf-scroll`. Mas no desktop, depois do
-   * agrupamento por jogador, o `.bf-scroll` foi configurado para crescer
-   * livremente (`overflow: visible`, sem `max-height`) — e quem scrolla
-   * é o `.col-center`. Este helper resolve os dois cenários.
+   * Depois da migração do desktop para scroll de página, o `.bf-scroll`
+   * cresce com o conteúdo e quem rola é o documento. Este helper prefere
+   * o `.bf-scroll` (caso algum dia volte a ter scroll interno) e, senão,
+   * sobe pela árvore até achar um ancestral scrollável; por fim, cai no
+   * `document.scrollingElement` (a página inteira).
    */
   const getScrollable = (): HTMLElement | null => {
     const el = bfScrollRef.current;
     if (!el) return null;
-    // O próprio bf-scroll tem overflow de fato?
     if (el.scrollHeight > el.clientHeight + 1 || el.scrollWidth > el.clientWidth + 1) {
       return el;
     }
-    // Senão, sobe até achar um ancestral que realmente scrolle.
     let parent = el.parentElement;
     while (parent) {
       const style = window.getComputedStyle(parent);
@@ -675,7 +674,7 @@ function Board({ G, ctx, moves, playerID, onExit }: any) {
       }
       parent = parent.parentElement;
     }
-    return el;
+    return (document.scrollingElement as HTMLElement | null) ?? null;
   };
 
   const onBfPointerDown = (e: ReactPointerEvent<HTMLDivElement>) => {
@@ -711,6 +710,7 @@ function Board({ G, ctx, moves, playerID, onExit }: any) {
     scrollable.scrollLeft = st.scrollLeft - dx;
     scrollable.scrollTop = st.scrollTop - dy;
   };
+
   const onBfPointerUp = (e: ReactPointerEvent<HTMLDivElement>) => {
     const st = panRef.current;
     if (!st.active) return;
