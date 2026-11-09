@@ -902,21 +902,13 @@ button:disabled {
    ========================================================= */
 
 @media (min-width: 1101px) {
-  #root {
-    height: 100vh;
-    min-height: 0;
-    max-height: 100vh;
-    overflow: hidden;
-  }
 
-  .game {
-    height: 100vh;
-    max-height: 100vh;
+.game {
     padding: 0.75rem;
     display: flex;
     flex-direction: column;
-    overflow: hidden;
     box-sizing: border-box;
+    min-height: 100vh;
   }
 
   .topbar {
@@ -957,32 +949,14 @@ button:disabled {
   }
 
   /* Grid: esquerda=Mercado, centro=Batalha+Mão, direita=Jogadores */
-  .layout {
-    flex: 1 1 0;
-    min-height: 0;
+.layout {
     grid-template-columns: 240px 1fr 280px;
     gap: 0.7rem;
-    overflow: hidden;
-    align-items: stretch;
+    align-items: start; /* colunas crescem com o próprio conteúdo */
   }
 
   .col-left, .col-center, .col-right {
-    min-height: 0;
     gap: 0.6rem;
-    overflow-y: auto;
-    overflow-x: hidden;
-    scrollbar-width: thin;
-    scrollbar-color: var(--border-lit) transparent;
-  }
-
-  .col-left::-webkit-scrollbar,
-  .col-center::-webkit-scrollbar,
-  .col-right::-webkit-scrollbar { width: 6px; }
-  .col-left::-webkit-scrollbar-thumb,
-  .col-center::-webkit-scrollbar-thumb,
-  .col-right::-webkit-scrollbar-thumb {
-    background: var(--border-lit);
-    border-radius: 3px;
   }
 
   /* Compactação geral */
