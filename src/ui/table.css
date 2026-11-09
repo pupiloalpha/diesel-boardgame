@@ -118,25 +118,6 @@
 
 .bf-scroll.panning { cursor: grabbing; }
 
-/* No desktop, o tabuleiro ocupa toda a altura restante do .col-center
-   e pode estender-se visualmente ATÉ ATRÁS do leque da mão (que é
-   position: fixed, z-index 150, pointer-events: none).
-   A reserva de padding-bottom do .col-center foi zerada e o
-   max-height do .bf-scroll considera apenas o topbar + folga. */
-@media (min-width: 1101px) {
-  .game { padding-bottom: 0.75rem; }
-
-  .col-center {
-    padding-bottom: 0;
-    /* O scroll do desktop é delegado a esta coluna — ver .bf-scroll abaixo. */
-  }
-
-  .bf-scroll {
-    max-height: none;
-    min-height: 240px;
-    overflow: visible;
-  }
-}
 .battlefield {
   --bf-zoom: 1;
   --mini-w: calc(46px * var(--bf-zoom));
